@@ -6,9 +6,10 @@
 #  - greps songnames from the net
 #
 # needs:
-# - PyMplayer >= 0.3.0: http://pypi.python.org/pypi/PyMPlayer/
+#  - python-gst0.10
 #
 # (c) 2008-03-17 Jochen Sprickerhof <jochen@sprickerhof.de>
+# (c) 2008-2009 Jochen Sprickerhof <jochen@sprickerhof.de>
 #
 # TODO:
 # - Abstand Programm - Titel (vielleicht auch Interpret, Title ändern)
@@ -20,26 +21,29 @@
 # - Mplayer in Station
 # - Variablen für akt, next, last
 # - threadpool mit cachenden mplayern
-# - threadpool mit mplayer im leerlauf
 # - leerlaufthreads nur 1-2 / oder ab und zu aufräumen
+# - sortierung nicht mehr automatisch in Stations
 #
 # FEATURE:
-# - PyMplayer loswerden?
-# - ICY Info abfragen: ICY Info: StreamTitle='´1LIVE mit Tobi Schaefer´';
 # - umschalten nach Liedwechsel (oder bei bestimmtem Lied)
 # - Cache: bei Sendersuchlauf alle, oder zyklisch davor und danach; taggen welche
 # - Bandrekorder: Ringpuffer für die letzten 2min, bei Aufnahme -> unendlich
 
+from optparse import OptionParser
 import curses
-from pymplayer import MPlayer
 from threading import Thread
 from time import sleep
 from urllib import urlopen
 import socket
-import getopt, sys
-from re import search
+from sys import exit
+from re import search, findall
+from unicodedata import normalize
+import gobject
+import pygst
+pygst.require('0.10')
+import gst
 
-class Station:
+class Station(object):
   def __init__(self, name, url, title = None):
     self.name = name
     self.url = url
@@ -131,39 +135,21 @@ class Station:
     if self.title:
       self.akt = self.title(self)
 
+  def get_url(self):
+    site = urlopen(self.url).read() # read(100)!
+    uris = findall('http://[^ \r\n]*', site)
+    if uris:
+      if 'tsfjazz' in self.url:
+        return uris[1]
+      return uris[0]
+    else:
+      return None
+
 class Stations(dict):
   def __init__(self):
     dict.__init__(self)
 
-    def bremenvier_old(self):
-      text = self.getsitere('http://www.radiobremen.de/bremenvier/musik/titelsuche/index.php',
-          'jetzt:</font></strong></span>(?:.*\n){2}(.*)\n(?:.*\n)(.*)\n')
-      if not text:
-        return ''
-      interpret = self.del_html(text[0])
-      interpret = self.replaceDict(interpret)
-      interpret = self.del_comma(interpret)
-      if 'Keine Anzeige m' in interpret:
-        return ''
-      title = self.del_html(text[1])
-      title = self.replaceDict(title)
-      vierDict = {
-          '[HOOKED]': '',
-          '[Hooked]': '',
-          '(HOOKED)': '',
-          '(Hooked)': '',
-          '[Vierling]': '',
-          '[VIERLING]': '',
-          '[HOOKED - Neutral]': '',
-          '[hooked - Neutral]': '',
-          '[HOOKED - Neurtal]': '',
-          '[hooked - Neurtal]': '',
-      }
-      title = self.replaceDict(title, vierDict)
-      return self.tunestring(interpret + ' - ' + title)
-
     def bremenvier(self):
-      #http://www.radiobremen.de/apps/php/liveplayer/nowplaying.php?welle=rb4
       text = self.getsitere('http://www.radiobremen.de/bremenvier/includes/mediabox.inc.php?c=onair',
           '<sendung>(.*)</sendung>(?:.|\s)*<jetzt>(.*): (.*)</jetzt>')
       if not text:
@@ -189,11 +175,6 @@ class Stations(dict):
           '&#x0022;': '"',
           ':': '-',
           '*': '',
-#          '\x97': 'ö',
-#          '\x91': 'ä',
-#          '\x82': 'é',
-#          '\x88': 'ú',
-#          '\xd1': 'Ae', # Ä
       }
       text = self.replaceDict(text, einsliveDict)
       if text.count('"') == 1:
@@ -223,12 +204,12 @@ class Stations(dict):
       return self.tunestring(title + ' - ' + more)
 
     def funkhaus_europa(self):
-      text = self.getsitere('http://www.funkhaus-europa.de/',
-          'Jetzt im Programm(?:.*\n){3}(.*)\n')
+      text = self.getsitere('http://www.funkhauseuropa.de/world_wide_music/playlists/index.phtml',
+                            '<!-- PLAYLIST (.*) -->(?:.*\n)*.*Uhr(.*)</td><td>(.*)</td><td>.*<span class="inv"> Minuten</span></td></tr>.*\n.*</table>.*\n.*<!-- //PLAYLIST  -->')
       if not text:
         return ''
-      title = self.del_html(text[0])
-      return self.tunestring(title)
+      interpret = self.del_html(text[1])
+      return self.tunestring(interpret + ' - ' + text[2] + ' (' + text[0] + ')')
 
     def ndr_info(self):
       text = self.getsitere('http://www.ndrinfo.de/', 'Es l.uft(?:.*\n){2}(.*)\n')
@@ -238,55 +219,11 @@ class Stations(dict):
       return self.tunestring(title[6:])
 
     def nordwestradio(self):
-      text = self.getsitere('http://www.radiobremen.de/apps/php/liveplayer/nowplaying.php?welle=NWR',
-                            '<p><strong>(?:<a[^>]*>)?([^<]*)</.*\n(?:</div>|Musiktitel: <strong>(.*)</strong><br />\nvon (.*)</p>)')
+      text = self.getsitere('http://www.radiobremen.de/extranet/playlist/nowplaying_nwr.xml',
+                            '<strong>(.*)</strong>')
       if not text:
         return ''
-      if len(text) > 2 and text[1]:
-        return self.tunestring(self.replaceDict(self.del_comma(text[2]) + ' - ' + text[1] + ' (' + text[0] + ')'))
-      return self.tunestring('(' + text[0] + ')')
-
-    def nordwestradio_old(self):
-      title = ''
-      text = self.getsitere('http://www.radiobremen.de/nordwestradio/programm/playlist/jetzt2.php3',
-          'Im Nordwestradio l&auml;uft(?:.*\n){6}(.*)\n(?:.*\n){5}(.*)\n')
-      if text:
-        interpret = self.del_html(text[0])
-        interpret = self.replaceDict(interpret)
-        interpret = self.del_comma(interpret)
-        title = self.del_html(text[1])
-        title = self.replaceDict(title)
-        if not title:
-          title = interpret
-        else:
-          title = interpret + ' - ' + title
-        if 'Ein Wortbeitrag oder ein nicht' in title:
-          title = ''
-      title = self.tunestring(title)
-
-      text = self.getsitere('http://www.radiobremen.de/nordwestradio/', 'Jetzt l&auml;uft(?:.*\n){22}(.*)\n')
-      if not text:
-        return self.tunestring(title)
-      program = self.del_html(text[0])
-      program = self.replaceDict(program)
-      if not title:
-        return self.tunestring(program)
-      title = title + ' (' + program + ')'
-      return self.tunestring(title)
-
-    def n_joy(self):
-      text = self.getsitere('http://www.n-joy.de/',
-          '<img src="/images/pfeil.gif" alt="" class="icon" /><span>Jetzt: (.*)\n')
-      if not text:
-        return ''
-      title = self.del_html(text[0])
-      n_joyDict = {
-        'N-JOY': ''
-      }
-      title = self.replaceDict(title, n_joyDict)
-      title = self.switch_title(title)
-      title = self.replaceDict(title)
-      return self.tunestring(title)
+      return self.tunestring(text[0])
 
     def wdr5(self):
       text = self.getsitere('http://www.wdr5.de/programm.html', '<tr class="(?:even|odd) aktuell">(?:.*\n){5}(.*)\n')
@@ -297,23 +234,10 @@ class Stations(dict):
       return self.tunestring(title)
 
     def jazzradio(self):
-      # http://www.jazzradio.net/playlist/playlistpull.php
-      text = self.getsitere('http://www.jazzradio.net/playlist/jazz.txt')
-      if not text or text == '</HEAD><BODY>':
+      text = self.getsitere('http://jazzradio.net/playlist/nowplaying.php', '<b>CURRENT: </b><br>(.*) - <i>(.*)</i>')
+      if not text:
         return ''
-      titles = text.splitlines()
-      title = titles[0]
-      if len(titles) > 3:
-        title = titles[3]
-      for line in titles:
-        if line and (line[0] == '*' or line[0] == '+'):
-          title = line
-          break
-      parts= title.split(';')
-      if len(parts) < 5:
-        return title
-      title = parts[4] + ' - ' + parts[3]
-      return self.tunestring(title)
+      return self.tunestring(text[0] + ' - ' + text[1])
 
     def radio_swiss_jazz(self):
       text = self.getsitere('http://www.radioswissjazz.ch/cgi-bin/pip/html.cgi?m=playlist&v=i&lang=de',
@@ -330,7 +254,7 @@ class Stations(dict):
       return self.tunestring(text[1] + ' - ' + text[0])
 
     def smooth_jazz(self):
-      text = self.getsitere('http://smoothjazz.com/playlist/', 'ARTIST.*\n(.*)\n(?:.*\n){7}(.*)\n')
+      text = self.getsitere('http://smoothjazz.com/playlist/', 'ARTIST[^\r]*\r([^\r]*)\r(?:[^\r]*\r){7}([^\r]*)\r')
       if not text:
         return ''
       interpret = self.del_html(text[0])
@@ -376,37 +300,31 @@ class Stations(dict):
       all = interpret + ' - ' + title
       return self.tunestring(all)
 
-    self['a'] = Station('Byte.fm', 'loadlist http://www.byte.fm/stream/bytefm.m3u')
-    #self['b'] = Station('Bremen 4', 'loadlist http://www.radiobremen.de/stream/live/bremenvier.m3u', bremenvier)
-    self['b'] = Station('Bremen 4', 'loadlist http://gffstream.ic.llnwd.net/stream/gffstream_mp3_w49a.m3u', bremenvier)
-    self['c'] = Station('on3Radio', 'loadlist http://streams.br-online.de/jugend-radio_2.m3u', on3radio)
-    self['d'] = Station('Deutschlandfunk', 'loadlist http://www.dradio.de/streaming/dlf_hq_ogg.m3u', deutschlandfunk)
-    self['e'] = Station('1 Live', 'loadlist http://www.wdr.de/wdrlive/media/einslive.m3u', einslive)
-    #self['f'] = Station('Funkhaus Europa', 'loadlist http://www.wdr.de/wdrlive/media/fhe.m3u', funkhaus_europa)
-    self['f'] = Station('Funkhaus Europa', 'loadlist http://gffstream.ic.llnwd.net/stream/gffstream_w20a.m3u', funkhaus_europa)
-    self['g'] = Station('Das Ding', 'loadlist http://lsd.newmedia.nacamar.net/bb/redirect.lsc?content=live&media=mp3&stream=swrdasdinglive/livestream.mp3', das_ding)
-    self['h'] = Station('Fritz', 'loadfile http://www.fritz.de/live.wax')
-    self['i'] = Station('NDR Info', 'loadfile http://ndr.ic.llnwd.net/stream/ndr_ndrinfo_hi_mp3', ndr_info)
-    #self['j'] = Station('Jazzradio', 'loadlist http://tv28.stream-music.net/root/castcontrol/playlist.php?port=8078', jazzradio)
-    self['j'] = Station('Jazzradio', 'loadlist http://tv13.stream-music.net/root/castcontrol/playlist.php?port=9352')
-    self['k'] = Station('Dradio Kultur', 'loadlist http://www.dradio.de/streaming/dkultur_hq_ogg.m3u', dradio)
-    self['l'] = Station('1 Live diggi', 'loadlist http://www.einslive.de/multimedia/diggi/channel_einslivediggi.m3u')
-    self['m'] = Station('Smooth Jazz', 'loadlist http://www.shoutcast.com/sbin/shoutcast-playlist.pls?rn=1042&file=filename.pls', smooth_jazz)
-    #self['n'] = Station('Nordwestradio', 'loadlist http://www.radiobremen.de/stream/live/nwr.m3u', nordwestradio)
-    self['n'] = Station('Nordwestradio', 'loadlist http://gffstream.ic.llnwd.net/stream/gffstream_mp3_w50a.m3u', nordwestradio)
-#    self['o'] = Station('Jazz 88', 'loadlist http://www.wbgo.org/listennow/wbgo.m3u')
-    self['o'] = Station('Groove FM', 'loadlist http://stream.groovefm.de:10028/listen.pls')
-    self['p'] = Station('Radio Swiss Pop', 'loadlist http://www.radioswisspop.ch/live/mp3.m3u', radio_swiss_pop)
-    self['q'] = Station('Nordwestradio globale Dorfmusik', 'loadlist http://80.252.104.101:8000/globaledorfmusik.m3u')
-    self['r'] = Station('Swiss Radio Jazz', 'loadlist http://www.swissradio.ch/streams/6092.m3u', swiss_radio_jazz)
-    self['s'] = Station('SWR 3', 'loadlist http://www.swr3.de/wraps/swr3_mp3.m3u.php', swr3)
-    self['t'] = Station ('TSF Jazz', 'loadlist http://player.tsfjazz.com/tsfjazz.m3u.php', tsf_jazz)
-    self['u'] = Station('1 Live Kunst', 'loadlist http://www.wdr.de/wdrlive/media/einslivekunst.m3u')
-    self['v'] = Station('Lounge Radio', 'loadlist http://www.lounge-radio.com/listen128.m3u')
-    self['w'] = Station('WDR 5', 'loadlist http://www.wdr.de/wdrlive/media/wdr5.m3u', wdr5)
-    self['x'] = Station('Swiss Groove', 'loadlist http://www.swissgroove.ch/listen128.pls')
-    self['y'] = Station('N-Joy', 'loadlist http://lsd.newmedia.nacamar.net/bb/redirect.lsc?content=live&media=mp3&stream=ndr/n-joy.mp3', n_joy)
-    self['z'] = Station('Radio Swiss Jazz', 'loadlist http://www.radioswissjazz.ch/live/mp3.m3u', radio_swiss_jazz)
+    self['a'] = Station('Byte.fm', 'http://www.byte.fm/stream/bytefm.m3u')
+    self['b'] = Station('Bremen 4', 'http://www.radiobremen.de/stream/live/bremenvier.m3u', bremenvier)
+    self['c'] = Station('on3Radio', 'http://streams.br-online.de/jugend-radio_2.m3u', on3radio)
+    self['d'] = Station('Deutschlandfunk', 'http://www.dradio.de/streaming/dlf_hq_ogg.m3u', deutschlandfunk)
+    self['e'] = Station('1 Live', 'http://www.wdr.de/wdrlive/media/einslive.m3u', einslive)
+    self['f'] = Station('Funkhaus Europa', 'http://gffstream.ic.llnwd.net/stream/gffstream_w20a.m3u', funkhaus_europa)
+    self['g'] = Station('Das Ding', 'http://lsd.newmedia.nacamar.net/bb/redirect.lsc?content=live&media=mp3&stream=swrdasdinglive/livestream.mp3', das_ding)
+    #self['h'] = Station('Fritz', 'http://www.fritz.de/live.wax')
+    self['i'] = Station('NDR Info', 'http://ndr.ic.llnwd.net/stream/ndr_ndrinfo_hi_mp3.m3u', ndr_info)
+    self['j'] = Station('Jazzradio', 'http://tv13.stream-music.net/root/castcontrol/playlist.php?port=9352', jazzradio)
+    self['k'] = Station('Dradio Kultur', 'http://www.dradio.de/streaming/dkultur_hq_ogg.m3u', dradio)
+    self['l'] = Station('1 Live diggi', 'http://www.einslive.de/multimedia/diggi/channel_einslivediggi.m3u')
+    self['m'] = Station('Smooth Jazz', 'http://smoothjazz.com/streams/smoothjazz_128.pls', smooth_jazz)
+    self['n'] = Station('Nordwestradio', 'http://gffstream.ic.llnwd.net/stream/gffstream_mp3_w50a.m3u', nordwestradio)
+    self['o'] = Station('Groove FM', 'http://stream.groovefm.de:10028/listen.pls')
+    self['p'] = Station('Radio Swiss Pop', 'http://www.radioswisspop.ch/live/mp3.m3u', radio_swiss_pop)
+    self['q'] = Station('Nordwestradio globale Dorfmusik', 'http://80.252.104.101:8000/globaledorfmusik.m3u')
+    self['r'] = Station('Swiss Radio Jazz', 'http://www.swissradio.ch/streams/6092.m3u', swiss_radio_jazz)
+    self['s'] = Station('SWR 3', 'http://www.swr3.de/wraps/swr3_mp3.m3u.php', swr3)
+    self['t'] = Station('TSF Jazz', 'http://player.tsfjazz.com/tsfjazz.m3u.php', tsf_jazz)
+    self['v'] = Station('Lounge Radio', 'http://www.lounge-radio.com/listen128.m3u')
+    self['w'] = Station('WDR 5', 'http://www.wdr.de/wdrlive/media/wdr5.m3u', wdr5)
+    self['x'] = Station('Swiss Groove', 'http://www.swissgroove.ch/listen128.pls')
+    self['y'] = Station('N-Joy', 'http://ndr.ic.llnwd.net/stream/ndr_n-joy_hi_mp3.m3u')
+    self['z'] = Station('Radio Swiss Jazz', 'http://www.radioswissjazz.ch/live/mp3.m3u', radio_swiss_jazz)
 
   def keys(self):
     return sorted(dict.keys(self))
@@ -496,88 +414,91 @@ class Screen(object):
     self.screen.addstr(x, 0, 'left/right: seek -/+ 10sec, shift-left/right: seek -/+ 2sec, space: pause')
     self.screen.refresh()
     
-class Player:
+class GstPlayer(object):
+  
+  def __init__(self, station, screen, oldPlayer = None):
+    self.station = station
+    self.screen = screen
+    self.oldPlayer = oldPlayer
 
-  two = False
+    self.player = gst.element_factory_make('playbin')
+    fakesink = gst.element_factory_make('fakesink')
+    self.player.set_property('video-sink', fakesink)
+    bus = self.player.get_bus()
+    bus.add_signal_watch()
+    bus.connect('message', self.on_message)
+
+    url = self.station.get_url()
+    if url:
+      self.player.set_property('uri', url)
+      self.player.set_state(gst.STATE_PLAYING)
+
+  def on_message(self, bus, message):
+    t = message.type
+    if t == gst.MESSAGE_EOS:
+      self.player.set_state(gst.STATE_NULL)
+    elif t == gst.MESSAGE_ERROR:
+      self.player.set_state(gst.STATE_NULL)
+      (err, debug) = message.parse_error()
+      print 'Error: %s' % err
+    elif t == gst.MESSAGE_BUFFERING:
+      percent = message.parse_buffering()
+      #print percent
+    elif t == gst.MESSAGE_STATE_CHANGED:
+      old, new, pending = message.parse_state_changed() 
+      if message.src == self.player and new == gst.STATE_PLAYING:
+        self.screen.akt = self.screen.next
+        self.screen.next = None
+        if self.oldPlayer:
+          self.oldPlayer.stop()
+    elif t == gst.MESSAGE_TAG:
+      taglist = message.parse_tag()
+      if 'title' in taglist:
+        self.station.akt = normalize('NFKD', unicode(taglist['title'])).encode('ASCII', 'ignore')
+
+  def stop(self):
+    if(self.oldPlayer):
+      self.oldPlayer.stop()
+    self.player.set_state(gst.STATE_NULL)
+
+  def pause(self):
+    if self.player.get_state()[1] == gst.STATE_PLAYING:
+      self.player.set_state(gst.STATE_PAUSED)
+    else:
+      self.player.set_state(gst.STATE_PLAYING)
+
+  def seek(self, val):
+    pos_int = self.player.query_position(self.time_format, None)[0]
+    seek_ns = pos_int - (val * 1000000000)
+    self.player.seek_simple(self.time_format, gst.SEEK_FLAG_FLUSH, seek_ns)
+
+class Player(object):
+  player = None
   stop_tune = True
 
   def __init__(self, scr, update):
     self.screen = Screen(scr, update)
 
-    def handle1(data):
-      if data.startswith('Starting playback...'):
-        if self.stop_tune:
-          self.mpl1.command('loadfile noactualfiletostopmplayer')
-        else:
-          self.mpl2.command('loadfile noactualfiletostopmplayer')
-          self.two = True
-          self.screen.akt = self.screen.next
-          self.screen.next = None
-
-    def handle2(data):
-      if data.startswith('Starting playback...'):
-        if self.stop_tune:
-          self.mpl2.command('loadfile noactualfiletostopmplayer')
-        else:
-          self.mpl1.command('loadfile noactualfiletostopmplayer')
-          self.two = False
-          self.screen.akt = self.screen.next
-          self.screen.next = None
-
-    self.mpl1 = MPlayer()
-    self.mpl1.handle_data = handle1
-    self.mpl2 = MPlayer()
-    self.mpl2.handle_data = handle2
-
-    self.mpl1.start()
-    self.mpl2.start()
-
-    thread = Thread(target = self.mpl1.poll_output)
-    thread.setDaemon(True)
-    thread.start()
-
-    thread2 = Thread(target = self.mpl2.poll_output)
-    thread2.setDaemon(True)
-    thread2.start()
-
-  def __del__(self):
-    self.halt()
-
-  def halt(self):
-    self.mpl1.stop()
-    self.mpl2.stop()
-
   def stop(self):
+    if self.player:
+      self.player.stop()
     self.screen.slide_stop = True
-    self.mpl1.command('loadfile noactualfiletostopmplayer')
-    self.mpl2.command('loadfile noactualfiletostopmplayer')
-    if self.screen.next:
-      self.two = not self.two
     self.screen.akt = None
     self.screen.next = None
     self.stop_tune = True
 
-  def command(self, cmd):
-    if self.two:
-      self.mpl1.command(cmd)
-    else:
-      self.mpl2.command(cmd)
-
   def tune(self, to):
     if self.screen.next or to == self.screen.akt:
       return
-    self.stop_tune = False
     self.screen.next = to
-    if self.two:
-      self.mpl2.command(self.screen.stations[to].url)
-    else:
-      self.mpl1.command(self.screen.stations[to].url)
+    self.player = GstPlayer(self.screen.stations[to], self.screen, self.player)
+    self.stop_tune = False
 
   def pause(self):
-    self.command('pause')
+    self.player.pause()
 
   def seek(self, val):
-    self.command('seek %i' % val)
+    self.player.seek(val)
 
   def slide(self):
     if not self.screen.slide_stop:
@@ -615,7 +536,7 @@ class Player:
 class StationKeyError(Exception):
   pass
 
-def cur_main(screen, update = 30, station = None):
+def cur_main(screen, loop, update = 30, station = None):
   socket.setdefaulttimeout(5)
   curses.curs_set(0)
   curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
@@ -634,8 +555,8 @@ def cur_main(screen, update = 30, station = None):
     if 0 < key < 256:
       key = chr(key)
       if key == 'Q':
-        plr.halt()
         screen.clear()
+        loop.quit()
         break
       elif key == 'R':
         plr.screen.redraw()
@@ -668,58 +589,37 @@ def grab(station, update):
   while True:
     try:
       for i in station:
+        if i not in stations:
+          print 'Station %s not found' % i
+          exit(2)
         stations[i].update()
         print stations[i].name + ': ' + stations[i].akt
       sleep(update)
     except KeyboardInterrupt:
       break
 
-def usage():
-  print 'Radio'
-  print '-g stationkey[,..] mode to test grabber function of a station (all for all stations)'
-  print '-h                 print this help'
-  print '-s stationkey      station to start with'
-  print '-u seconds         update intervall for grabber function'
-
 def main():
-  if len(sys.argv) == 1:
-    curses.wrapper(cur_main)
-    sys.exit()
+  parser = OptionParser()
+  parser.add_option('-g', '--grabber', help='stationkey[,..] mode to test grabber function of a station (all for all stations)')
+  parser.add_option('-s', '--station', help='Station to start with')
+  parser.add_option('-u', '--update', type='float', help='update intervall for grabber function')
+  (options, args) = parser.parse_args()
 
-  try:
-    opts, args = getopt.getopt(sys.argv[1:], 'g:hs:u:')
-  except getopt.GetoptError, err:
-    print str(err)
-    usage()
-    sys.exit(2)
-  grabber = None
-  update = None
-  station = None
-  for o, a in opts:
-    if o == '-g':
-      grabber = a
-    elif o == '-h':
-      usage()
-      sys.exit()
-    elif o == '-s':
-      station = a
-    elif o == '-u':
-      update = float(a)
-    else:
-      assert False, 'unhandled option'
-
-  if grabber:
-    if not update:
-      update = 2
-    grab(grabber.split(','), update)
+  if options.grabber:
+    if not options.update:
+      options.update = 2
+    grab(options.grabber.split(','), options.update)
   else:
-    if not update:
-      update = 30
+    if not options.update:
+      options.update = 30
     try:
-      curses.wrapper(cur_main, update, station)
+      gobject.threads_init()
+      loop = gobject.MainLoop()
+      Thread(target = curses.wrapper, args = (cur_main, loop, options.update, options.station)).start()
+      loop.run()
     except StationKeyError, e:
       print e
-      sys.exit(2)
+      exit(2)
 
 if __name__ == '__main__':
   main()
