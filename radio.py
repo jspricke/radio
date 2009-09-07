@@ -66,27 +66,32 @@ class Station(object):
       '&nbsp;': ' ',
   }
 
-  def replaceDict(self, string, dict = htmlDict):
+  @staticmethod
+  def replaceDict(string, dict = htmlDict):
     for key in dict:
       string = string.replace(key, dict[key])
     return string
 
-  def del_comma(self, string):
+  @staticmethod
+  def del_comma(string):
     string = string.replace(', ', ',')
     if ',' in string and not '&' in string and not ';' in string:
       string = string[string.find(',') + 1:] + ' ' + string[:string.find(',')]
     return string
 
-  def del_html(self, string):
+  @staticmethod
+  def del_html(string):
     while '<' in string:
       string = string[:string.find('<')] + string[string.find('>') + 1:]
     return string
 
-  def switch_title(self, title):
+  @staticmethod
+  def switch_title(title):
     help = title[title.rfind(' - ') + 2:]
     return help + ' - ' + title[:title.rfind('-')]
 
-  def caps(self, string):
+  @staticmethod
+  def caps(string):
     list = string.split(' ')
     newlist = []
     for word in list:
@@ -96,7 +101,8 @@ class Station(object):
         newlist.append(word)
     return ' '.join(newlist)
 
-  def tunestring(self, string):
+  @classmethod
+  def tunestring(cls, string):
     if 'DOCTYPE' in string:
       return ''
     ascii = {
@@ -105,12 +111,12 @@ class Station(object):
         '\n': ' ',
         '\x00': ' ',
         }
-    string = self.replaceDict(string, ascii)
+    string = cls.replaceDict(string, ascii)
     string = string.strip()
     string = string.rstrip()
     while '  ' in string:
       string = string.replace('  ', ' ')
-    string = self.caps(string)
+    string = cls.caps(string)
     if string == '-':
       return ''
     if string.startswith('- '):
@@ -119,9 +125,10 @@ class Station(object):
       string = string[:-2]
     return string
 
-  def getsitere(self, url, reg = None):
+  @staticmethod
+  def getsitere(url, reg = None):
     try:
-      site = urlopen(url).read()
+      site = urlopen(url).read() # limit read(100)
     except (Exception, socket.error):
       return None
     if not reg:
@@ -600,9 +607,9 @@ def grab(station, update):
 
 def main():
   parser = OptionParser()
-  parser.add_option('-g', '--grabber', help='stationkey[,..] mode to test grabber function of a station (all for all stations)')
-  parser.add_option('-s', '--station', help='Station to start with')
-  parser.add_option('-u', '--update', type='float', help='update intervall for grabber function')
+  parser.add_option('-g', '--grabber', metavar='stationkey[,..]', help='mode to test grabber function of a station (all for all stations)')
+  parser.add_option('-s', '--station', metavar='stationkey', help='Station to start with')
+  parser.add_option('-u', '--update', type='float', metavar='time', help='update intervall for grabber function')
   (options, args) = parser.parse_args()
 
   if options.grabber:
