@@ -3,31 +3,15 @@
 #
 # Web Radio Station Tuner
 #  - seamless playing
-#  - greps songnames from the net
+#  - greps song names from the net
 #
 # needs:
-#  - python-gst0.10
+# aptitude install python-gobject python-gst0.10 gstreamer0.10-plugins-good gstreamer0.10-plugins-bad gstreamer0.10-plugins-ugly
 #
-# (c) 2008-03-17 Jochen Sprickerhof <jochen@sprickerhof.de>
-# (c) 2008-2009 Jochen Sprickerhof <jochen@sprickerhof.de>
+# http://jochen.sprickerhof.de/software/radio
 #
-# TODO:
-# - Abstand Programm - Titel (vielleicht auch Interpret, Title ändern)
-# - L: letztes Programm wieder anstellen
-# - U: Undo switch
-# - umschalten wenn neuer Sender nicht älter als alter
-# - Screen.__akt und __next zusammenbauen (?)
-# - Mplayer worker threads wenn einer fertig, vergleich mit self == next
-# - Mplayer in Station
-# - Variablen für akt, next, last
-# - threadpool mit cachenden mplayern
-# - leerlaufthreads nur 1-2 / oder ab und zu aufräumen
-# - sortierung nicht mehr automatisch in Stations
-#
-# FEATURE:
-# - umschalten nach Liedwechsel (oder bei bestimmtem Lied)
-# - Cache: bei Sendersuchlauf alle, oder zyklisch davor und danach; taggen welche
-# - Bandrekorder: Ringpuffer für die letzten 2min, bei Aufnahme -> unendlich
+# (c) 2008-03-17 Jochen Sprickerhof <jochen at sprickerhof.de>
+# (c) 2008-2010 Jochen Sprickerhof <jochen at sprickerhof.de>
 
 from optparse import OptionParser
 import curses
@@ -143,11 +127,15 @@ class Station(object):
       self.akt = self.title(self)
 
   def get_url(self):
-    site = urlopen(self.url).read() # read(100)!
-    uris = findall('http://[^ \r\n]*', site)
+    try:
+      site = urlopen(self.url).read() # read(100)!
+    except IOError:
+      return None
+    if self.url.endswith('wax'):
+      uris = findall('mms://[^ \r\n"]*', site)
+    else:
+      uris = findall('http://[^ \r\n]*', site)
     if uris:
-      if 'tsfjazz' in self.url:
-        return uris[1]
       return uris[0]
     else:
       return None
@@ -219,18 +207,20 @@ class Stations(dict):
       return self.tunestring(interpret + ' - ' + text[2] + ' (' + text[0] + ')')
 
     def ndr_info(self):
-      text = self.getsitere('http://www.ndrinfo.de/', 'Es l.uft(?:.*\n){2}(.*)\n')
+      text = self.getsitere('http://www.ndrinfo.de/', 'NDR Info Radio-Box(?:.*\n){2}(.*)\n')
       if not text:
         return ''
       title = self.del_html(text[0])
-      return self.tunestring(title[6:])
+      return self.tunestring(title)
 
     def nordwestradio(self):
       text = self.getsitere('http://www.radiobremen.de/extranet/playlist/nowplaying_nwr.xml',
-                            '<strong>(.*)</strong>')
+                            '<strong>(.*)</strong>.*\n.*Titel: "(.*)"<br />\nVon: (.*)</p>|<strong>(.*)</strong>')
       if not text:
         return ''
-      return self.tunestring(text[0])
+      if text[0]:
+        return self.tunestring(text[1] + ' - ' + self.del_comma(text[2]) + ' (' + self.del_html(text[0]) + ')')
+      return self.tunestring(self.del_html(text[3]))
 
     def wdr5(self):
       text = self.getsitere('http://www.wdr5.de/programm.html', '<tr class="(?:even|odd) aktuell">(?:.*\n){5}(.*)\n')
@@ -307,16 +297,24 @@ class Stations(dict):
       all = interpret + ' - ' + title
       return self.tunestring(all)
 
+    def tv_ndr(self):
+      text = self.getsitere('http://www.ndr.de/home/index.html',
+          'JETZT IM NDR FERNSEHEN(?:.*\n){,10}<h2>(.*)\n')
+      if not text:
+        return ''
+      title = self.del_html(text[0])
+      return self.tunestring(title)
+
     self['a'] = Station('Byte.fm', 'http://www.byte.fm/stream/bytefm.m3u')
     self['b'] = Station('Bremen 4', 'http://www.radiobremen.de/stream/live/bremenvier.m3u', bremenvier)
     self['c'] = Station('on3Radio', 'http://streams.br-online.de/jugend-radio_2.m3u', on3radio)
     self['d'] = Station('Deutschlandfunk', 'http://www.dradio.de/streaming/dlf_hq_ogg.m3u', deutschlandfunk)
     self['e'] = Station('1 Live', 'http://www.wdr.de/wdrlive/media/einslive.m3u', einslive)
     self['f'] = Station('Funkhaus Europa', 'http://gffstream.ic.llnwd.net/stream/gffstream_w20a.m3u', funkhaus_europa)
-    self['g'] = Station('Das Ding', 'http://lsd.newmedia.nacamar.net/bb/redirect.lsc?content=live&media=mp3&stream=swrdasdinglive/livestream.mp3', das_ding)
-    #self['h'] = Station('Fritz', 'http://www.fritz.de/live.wax')
+    self['g'] = Station('Das Ding', 'http://mp3-live.dasding.de/dasding_m.m3u', das_ding)
+    self['h'] = Station('Fritz', 'http://www.fritz.de/live.m3u')
     self['i'] = Station('NDR Info', 'http://ndr.ic.llnwd.net/stream/ndr_ndrinfo_hi_mp3.m3u', ndr_info)
-    self['j'] = Station('Jazzradio', 'http://tv13.stream-music.net/root/castcontrol/playlist.php?port=9352', jazzradio)
+    self['j'] = Station('Jazzradio', 'http://www.jazzradio.net/docs/stream/jazzradio.pls', jazzradio)
     self['k'] = Station('Dradio Kultur', 'http://www.dradio.de/streaming/dkultur_hq_ogg.m3u', dradio)
     self['l'] = Station('1 Live diggi', 'http://www.einslive.de/multimedia/diggi/channel_einslivediggi.m3u')
     self['m'] = Station('Smooth Jazz', 'http://smoothjazz.com/streams/smoothjazz_128.pls', smooth_jazz)
@@ -326,12 +324,14 @@ class Stations(dict):
     self['q'] = Station('Nordwestradio globale Dorfmusik', 'http://80.252.104.101:8000/globaledorfmusik.m3u')
     self['r'] = Station('Swiss Radio Jazz', 'http://www.swissradio.ch/streams/6092.m3u', swiss_radio_jazz)
     self['s'] = Station('SWR 3', 'http://www.swr3.de/wraps/swr3_mp3.m3u.php', swr3)
-    self['t'] = Station('TSF Jazz', 'http://player.tsfjazz.com/tsfjazz.m3u.php', tsf_jazz)
+    self['t'] = Station('TSF Jazz', 'http://broadcast.infomaniak.ch/tsfjazz-high.mp3.pls', tsf_jazz)
+    self['u'] = Station('BBC World Service', 'http://www.bbc.co.uk/worldservice/meta/tx/nb/live/eneuk.pls')
     self['v'] = Station('Lounge Radio', 'http://www.lounge-radio.com/listen128.m3u')
     self['w'] = Station('WDR 5', 'http://www.wdr.de/wdrlive/media/wdr5.m3u', wdr5)
     self['x'] = Station('Swiss Groove', 'http://www.swissgroove.ch/listen128.pls')
     self['y'] = Station('N-Joy', 'http://ndr.ic.llnwd.net/stream/ndr_n-joy_hi_mp3.m3u')
     self['z'] = Station('Radio Swiss Jazz', 'http://www.radioswissjazz.ch/live/mp3.m3u', radio_swiss_jazz)
+    self['za'] = Station('TV NDR', '', tv_ndr)
 
   def keys(self):
     return sorted(dict.keys(self))
@@ -340,7 +340,6 @@ class Stations(dict):
     return iter(self.keys())
 
 class Screen(object):
-
   __akt = None
   __next = None
   __slide_stop = True
@@ -388,6 +387,9 @@ class Screen(object):
       sleep(self.update)
 
   def redraw(self):
+    line, cols = self.screen.getmaxyx()
+    if(line < 7 + len(self.stations)):
+      raise ScreenSizeError('Please resize your terminal to at least %d lines' % (7 + len(self.stations)))
     self.screen.clear()
     x = 0
     self.screen.addstr(x, 16, ' _', curses.color_pair(3))
@@ -422,15 +424,12 @@ class Screen(object):
     self.screen.refresh()
     
 class GstPlayer(object):
-  
   def __init__(self, station, screen, oldPlayer = None):
     self.station = station
     self.screen = screen
     self.oldPlayer = oldPlayer
 
     self.player = gst.element_factory_make('playbin')
-    fakesink = gst.element_factory_make('fakesink')
-    self.player.set_property('video-sink', fakesink)
     bus = self.player.get_bus()
     bus.add_signal_watch()
     bus.connect('message', self.on_message)
@@ -461,7 +460,7 @@ class GstPlayer(object):
     elif t == gst.MESSAGE_TAG:
       taglist = message.parse_tag()
       if 'title' in taglist:
-        self.station.akt = normalize('NFKD', unicode(taglist['title'])).encode('ASCII', 'ignore')
+        self.station.akt = normalize('NFKD', unicode(taglist['title'])).encode('ASCII', 'ignore')[:100] #TODO: changes stream with jazzradio wtf
 
   def stop(self):
     if(self.oldPlayer):
@@ -541,6 +540,9 @@ class Player(object):
       self.tune(keys[0])
 
 class StationKeyError(Exception):
+  pass
+
+class ScreenSizeError(Exception):
   pass
 
 def cur_main(screen, loop, update = 30, station = None):
@@ -624,7 +626,7 @@ def main():
       loop = gobject.MainLoop()
       Thread(target = curses.wrapper, args = (cur_main, loop, options.update, options.station)).start()
       loop.run()
-    except StationKeyError, e:
+    except (ScreenSizeError, StationKeyError), e:
       print e
       exit(2)
 
