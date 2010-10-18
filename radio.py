@@ -313,7 +313,7 @@ class Stations(dict):
     self['f'] = Station('Funkhaus Europa', 'http://gffstream.ic.llnwd.net/stream/gffstream_w20a.m3u', funkhaus_europa)
     self['g'] = Station('Das Ding', 'http://mp3-live.dasding.de/dasding_m.m3u', das_ding)
     self['h'] = Station('Fritz', 'http://www.fritz.de/live.m3u')
-    self['i'] = Station('NDR Info', 'http://ndr.ic.llnwd.net/stream/ndr_ndrinfo_hi_mp3.m3u', ndr_info)
+    self['i'] = Station('NDR Info', 'http://ndrstream.ic.llnwd.net/stream/ndrstream_ndrinfo_hi_mp3.m3u', ndr_info)
     self['j'] = Station('Jazzradio', 'http://www.jazzradio.net/docs/stream/jazzradio.pls', jazzradio)
     self['k'] = Station('Dradio Kultur', 'http://www.dradio.de/streaming/dkultur_hq_ogg.m3u', dradio)
     self['l'] = Station('1 Live diggi', 'http://www.einslive.de/multimedia/diggi/channel_einslivediggi.m3u')
@@ -329,7 +329,7 @@ class Stations(dict):
     self['v'] = Station('Lounge Radio', 'http://www.lounge-radio.com/listen128.m3u')
     self['w'] = Station('WDR 5', 'http://www.wdr.de/wdrlive/media/wdr5.m3u', wdr5)
     self['x'] = Station('Swiss Groove', 'http://www.swissgroove.ch/listen128.pls')
-    self['y'] = Station('N-Joy', 'http://ndr.ic.llnwd.net/stream/ndr_n-joy_hi_mp3.m3u')
+    self['y'] = Station('N-Joy', 'http://ndrstream.ic.llnwd.net/stream/ndrstream_n-joy_hi_mp3.m3u')
     self['z'] = Station('Radio Swiss Jazz', 'http://www.radioswissjazz.ch/live/mp3.m3u', radio_swiss_jazz)
     self['za'] = Station('TV NDR', '', tv_ndr)
 
