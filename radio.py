@@ -144,6 +144,12 @@ class Stations(dict):
   def __init__(self):
     dict.__init__(self)
 
+    def bbc(self):
+      text = self.getsitere('http://www.bbc.co.uk/worldservice/', 'on-now"><[^>]*>([^<]*)<')
+      if not text:
+        return ''
+      return self.tunestring(text[0])
+
     def bremenvier(self):
       text = self.getsitere('http://www.radiobremen.de/bremenvier/includes/mediabox.inc.php?c=onair',
           '<sendung>(.*)</sendung>(?:.|\s)*<jetzt>(.*): (.*)</jetzt>')
@@ -151,12 +157,11 @@ class Stations(dict):
         return ''
       return self.tunestring(self.replaceDict(self.del_comma(text[1]) + ' - ' + text[2] + ' (' + text[0] + ')'))
 
-    def on3radio(self):
-      text = self.getsitere('http://www.br-online.de/streaming/on3radio/titel_interpret.xml',
-                            '<titel><!\[CDATA\[(.*)]]></titel>\r\n <interpret><!\[CDATA\[(.*)]]></interpret>')
+    def bytefm(self):
+      text = self.getsitere('http://www.byte.fm/php/content/home/new.php', 'Aktueller Song:</b></td></tr><tr><td> <a[^>]*>([^<]*)</a>')
       if not text:
         return ''
-      return self.tunestring(text[1] + ' - ' + text[0])
+      return self.tunestring(text[0])
 
     def einslive(self):
       text = self.getsitere('http://www.einslive.de/radiotext/RADIOTXT.TXT')
@@ -182,6 +187,22 @@ class Stations(dict):
         text = interpret + ' - ' + title
       return self.tunestring(text)
 
+    def einslive_diggi(self):
+      text = self.getsitere('http://www.einslive.de/multimedia/diggi/', 'Die letzten 12 Titel(?:[^<]*<[^>]*>){15}([^<]*)</td><td>([^<]*)<')
+      if not text:
+        return ''
+      return self.tunestring(text[0] + ' - ' + text[1])
+
+    def das_ding(self):
+      text = self.getsitere('http://www.dasding.de/ext/playlist/titel_xml.php',
+          '<name>(.*)</name>(?:.*\n)+.*<song>(.*)</song>(?:.*\n)+.*<artist>(.*)</artist>(?:.*\n)+.*</current>')
+      if not text:
+        return ''
+      if not text[1]:
+        return self.tunestring(text[0])
+      all = self.del_comma(text[2]) + ' - ' + text[1] + ' (' + self.tunestring(text[0]) + ')'
+      return self.tunestring(all)
+
     def deutschlandfunk(self):
       text = self.getsitere('http://www.dradio.de/jetztimradio/', 'DEUTSCHLANDFUNK.*(?:.*\n){7}(.*)\n(?:.*\n){4}(.*)\n')
       if not text:
@@ -206,6 +227,30 @@ class Stations(dict):
       interpret = self.del_html(text[1])
       return self.tunestring(interpret + ' - ' + text[2] + ' (' + text[0] + ')')
 
+    def groovefm(self):
+      text = self.getsitere('http://www.groovefm.de/playlist', 'Aktueller Track.*\n([^<]*)<')
+      if not text:
+        return ''
+      return self.tunestring(text[0])
+
+    def jazzradio(self):
+      text = self.getsitere('http://jazz.radiohaus-berlin.de/jazzradio/playlist/nowplaying.php', '<b>CURRENT: </b><br>(.*) - <i>(.*)</i>')
+      if not text:
+        return ''
+      return self.tunestring(text[0] + ' - ' + text[1])
+
+    def lounge_radio(self):
+      text = self.getsitere('http://www.lounge-radio.com/code/pushed_files/now.html', 'Artist:.*\n.*<div>(.*)</div>.*\n(?:.*\n){2}.*Track:.*\n.*<div>(.*)</div>')
+      if not text:
+        return ''
+      return self.tunestring(text[0] + ' - ' + text[1])
+
+    def n_joy(self):
+      text = self.getsitere('http://www.ndr.de/n-joy/onaircenter103-onaircenterpopup.html', 'webradio_song_now">(.*)</td>')
+      if not text:
+        return ''
+      return self.tunestring(text[0])
+
     def ndr_info(self):
       text = self.getsitere('http://www.ndrinfo.de/', 'NDR Info Radio-Box(?:.*\n){2}(.*)\n')
       if not text:
@@ -222,19 +267,12 @@ class Stations(dict):
         return self.tunestring(text[1] + ' - ' + self.del_comma(text[2]) + ' (' + self.del_html(text[0]) + ')')
       return self.tunestring(self.del_html(text[3]))
 
-    def wdr5(self):
-      text = self.getsitere('http://www.wdr5.de/programm.html', '<tr class="(?:even|odd) aktuell">(?:.*\n){5}(.*)\n')
+    def on3radio(self):
+      text = self.getsitere('http://www.br-online.de/streaming/on3radio/titel_interpret.xml',
+                            '<titel><!\[CDATA\[(.*)]]></titel>\r\n <interpret><!\[CDATA\[(.*)]]></interpret>')
       if not text:
         return ''
-      title = self.del_html(text[0])
-      title = title.replace('WDR 5', '')
-      return self.tunestring(title)
-
-    def jazzradio(self):
-      text = self.getsitere('http://jazzradio.net/playlist/nowplaying.php', '<b>CURRENT: </b><br>(.*) - <i>(.*)</i>')
-      if not text:
-        return ''
-      return self.tunestring(text[0] + ' - ' + text[1])
+      return self.tunestring(text[1] + ' - ' + text[0])
 
     def radio_swiss_jazz(self):
       text = self.getsitere('http://www.radioswissjazz.ch/cgi-bin/pip/html.cgi?m=playlist&v=i&lang=de',
@@ -249,6 +287,12 @@ class Stations(dict):
       if not text:
         return ''
       return self.tunestring(text[1] + ' - ' + text[0])
+
+    def swiss_groove(self):
+      text = self.getsitere('http://www.swissgroove.ch/de/music/', 'AKTUELL GESPIELT(?:.*\n){8}.*Künstler: &nbsp;(.*)<br />\n.*Lied: &nbsp;(.*)<br />')
+      if not text:
+        return ''
+      return self.tunestring(text[0] + ' - ' + text[1])
 
     def smooth_jazz(self):
       text = self.getsitere('http://smoothjazz.com/playlist/', 'ARTIST[^\r]*\r([^\r]*)\r(?:[^\r]*\r){7}([^\r]*)\r')
@@ -270,23 +314,6 @@ class Stations(dict):
       title = self.del_html(text[0])
       return self.tunestring(title)
 
-    def das_ding(self):
-      text = self.getsitere('http://www.dasding.de/ext/playlist/titel_xml.php',
-          '<name>(.*)</name>(?:.*\n)+.*<song>(.*)</song>(?:.*\n)+.*<artist>(.*)</artist>(?:.*\n)+.*</current>')
-      if not text:
-        return ''
-      if not text[1]:
-        return self.tunestring(text[0])
-      all = self.del_comma(text[2]) + ' - ' + text[1] + ' (' + self.tunestring(text[0]) + ')'
-      return self.tunestring(all)
-
-    def tsf_jazz(self):
-      text = self.getsitere('http://www.tsfjazz.com/getSongInformations.php')
-      if not text:
-        return ''
-      text = text.replace('|', ' - ')
-      return self.tunestring(text)
-
     def swr3(self):
       text = self.getsitere('http://www.swr3.de/-/id=66332/12w4f32/index.html',
           '<div class="doctypes_WR_ipretheadline">(.*)</div>\n<div class="doctypes_WR_titleheadline">(.*)</div>')
@@ -297,6 +324,21 @@ class Stations(dict):
       all = interpret + ' - ' + title
       return self.tunestring(all)
 
+    def tsf_jazz(self):
+      text = self.getsitere('http://www.tsfjazz.com/getSongInformations.php')
+      if not text:
+        return ''
+      text = text.replace('|', ' - ')
+      return self.tunestring(text)
+
+    def wdr5(self):
+      text = self.getsitere('http://www.wdr5.de/programm.html', '<tr class="(?:even|odd) aktuell">(?:.*\n){5}(.*)\n')
+      if not text:
+        return ''
+      title = self.del_html(text[0])
+      title = title.replace('WDR 5', '')
+      return self.tunestring(title)
+
     def tv_ndr(self):
       text = self.getsitere('http://www.ndr.de/home/index.html',
           'JETZT IM NDR FERNSEHEN(?:.*\n){,10}<h2>(.*)\n')
@@ -305,7 +347,7 @@ class Stations(dict):
       title = self.del_html(text[0])
       return self.tunestring(title)
 
-    self['a'] = Station('Byte.fm', 'http://www.byte.fm/stream/bytefm.m3u')
+    self['a'] = Station('Byte.fm', 'http://www.byte.fm/stream/bytefm.m3u', bytefm)
     self['b'] = Station('Bremen 4', 'http://www.radiobremen.de/stream/live/bremenvier.m3u', bremenvier)
     self['c'] = Station('on3Radio', 'http://streams.br-online.de/jugend-radio_2.m3u', on3radio)
     self['d'] = Station('Deutschlandfunk', 'http://www.dradio.de/streaming/dlf_hq_ogg.m3u', deutschlandfunk)
@@ -316,20 +358,20 @@ class Stations(dict):
     self['i'] = Station('NDR Info', 'http://ndrstream.ic.llnwd.net/stream/ndrstream_ndrinfo_hi_mp3.m3u', ndr_info)
     self['j'] = Station('Jazzradio', 'http://www.jazzradio.net/docs/stream/jazzradio.pls', jazzradio)
     self['k'] = Station('Dradio Kultur', 'http://www.dradio.de/streaming/dkultur_hq_ogg.m3u', dradio)
-    self['l'] = Station('1 Live diggi', 'http://www.einslive.de/multimedia/diggi/channel_einslivediggi.m3u')
+    self['l'] = Station('1 Live diggi', 'http://www.einslive.de/multimedia/diggi/channel_einslivediggi.m3u', einslive_diggi)
     self['m'] = Station('Smooth Jazz', 'http://smoothjazz.com/streams/smoothjazz_128.pls', smooth_jazz)
     self['n'] = Station('Nordwestradio', 'http://gffstream.ic.llnwd.net/stream/gffstream_mp3_w50a.m3u', nordwestradio)
-    self['o'] = Station('Groove FM', 'http://stream.groovefm.de:10028/listen.pls')
+    self['o'] = Station('Groove FM', 'http://stream.groovefm.de:10028/listen.pls', groovefm)
     self['p'] = Station('Radio Swiss Pop', 'http://www.radioswisspop.ch/live/mp3.m3u', radio_swiss_pop)
     self['q'] = Station('Nordwestradio globale Dorfmusik', 'http://80.252.104.101:8000/globaledorfmusik.m3u')
     self['r'] = Station('Swiss Radio Jazz', 'http://www.swissradio.ch/streams/6092.m3u', swiss_radio_jazz)
     self['s'] = Station('SWR 3', 'http://www.swr3.de/wraps/swr3_mp3.m3u.php', swr3)
     self['t'] = Station('TSF Jazz', 'http://broadcast.infomaniak.ch/tsfjazz-high.mp3.pls', tsf_jazz)
-    self['u'] = Station('BBC World Service', 'http://www.bbc.co.uk/worldservice/meta/tx/nb/live/eneuk.pls')
-    self['v'] = Station('Lounge Radio', 'http://www.lounge-radio.com/listen128.m3u')
+    self['u'] = Station('BBC World Service', 'http://www.bbc.co.uk/worldservice/meta/tx/nb/live/eneuk.pls', bbc)
+    self['v'] = Station('Lounge Radio', 'http://www.lounge-radio.com/listen128.m3u', lounge_radio)
     self['w'] = Station('WDR 5', 'http://www.wdr.de/wdrlive/media/wdr5.m3u', wdr5)
-    self['x'] = Station('Swiss Groove', 'http://www.swissgroove.ch/listen128.pls')
-    self['y'] = Station('N-Joy', 'http://ndrstream.ic.llnwd.net/stream/ndrstream_n-joy_hi_mp3.m3u')
+    self['x'] = Station('Swiss Groove', 'http://www.swissgroove.ch/listen128.pls', swiss_groove)
+    self['y'] = Station('N-Joy', 'http://ndrstream.ic.llnwd.net/stream/ndrstream_n-joy_hi_mp3.m3u', n_joy)
     self['z'] = Station('Radio Swiss Jazz', 'http://www.radioswissjazz.ch/live/mp3.m3u', radio_swiss_jazz)
     self['za'] = Station('TV NDR', '', tv_ndr)
 
@@ -408,7 +450,7 @@ class Screen(object):
         color = 0
       self.screen.addstr(x, 0, i + ': ')
       self.screen.addstr(self.stations[i].name, curses.color_pair(color))
-      self.screen.addstr(x, 20, self.stations[i].akt)
+      self.screen.addstr(x, 21, self.stations[i].akt)
       x += 1
     if not self.akt:
       print '\033]0;Radio\007'
