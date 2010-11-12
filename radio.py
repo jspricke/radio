@@ -48,6 +48,10 @@ class Station(object):
       '&amp;': '&',
       '&quot;': '"',
       '&nbsp;': ' ',
+      '\t': ' ',
+      '\r': ' ',
+      '\n': ' ',
+      '\x00': ' ',
   }
 
   @staticmethod
@@ -70,11 +74,6 @@ class Station(object):
     return string
 
   @staticmethod
-  def switch_title(title):
-    help = title[title.rfind(' - ') + 2:]
-    return help + ' - ' + title[:title.rfind('-')]
-
-  @staticmethod
   def caps(string):
     list = string.split(' ')
     newlist = []
@@ -89,13 +88,7 @@ class Station(object):
   def tunestring(cls, string):
     if 'DOCTYPE' in string:
       return ''
-    ascii = {
-        '\t': ' ',
-        '\r': ' ',
-        '\n': ' ',
-        '\x00': ' ',
-        }
-    string = cls.replaceDict(string, ascii)
+    string = cls.replaceDict(string)
     string = string.strip()
     string = string.rstrip()
     while '  ' in string:
@@ -155,7 +148,7 @@ class Stations(dict):
           '<sendung>(.*)</sendung>(?:.|\s)*<jetzt>(.*): (.*)</jetzt>')
       if not text:
         return ''
-      return self.tunestring(self.replaceDict(self.del_comma(text[1]) + ' - ' + text[2] + ' (' + text[0] + ')'))
+      return self.tunestring(self.del_comma(text[1]) + ' - ' + text[2] + ' (' + text[0] + ')')
 
     def bytefm(self):
       text = self.getsitere('http://www.byte.fm/php/content/home/new.php', 'Aktueller Song:</b></td></tr><tr><td> <a[^>]*>([^<]*)</a>')
@@ -200,8 +193,7 @@ class Stations(dict):
         return ''
       if not text[1]:
         return self.tunestring(text[0])
-      all = self.del_comma(text[2]) + ' - ' + text[1] + ' (' + self.tunestring(text[0]) + ')'
-      return self.tunestring(all)
+      return self.tunestring(self.del_comma(text[2]) + ' - ' + text[1] + ' (' + self.tunestring(text[0]) + ')')
 
     def deutschlandfunk(self):
       text = self.getsitere('http://www.dradio.de/jetztimradio/', 'DEUTSCHLANDFUNK.*(?:.*\n){7}(.*)\n(?:.*\n){4}(.*)\n')
@@ -299,12 +291,9 @@ class Stations(dict):
       if not text:
         return ''
       interpret = self.del_html(text[0])
-      interpret = self.replaceDict(interpret)
       title = self.del_html(text[1])
-      title = self.replaceDict(title)
       title = title.replace(' - HOT PICK', '')
-      all = interpret + ' - ' + title
-      return self.tunestring(all)
+      return self.tunestring(interpret + ' - ' + title)
 
     def swiss_radio_jazz(self):
       text = self.getsitere('http://www.cogg.de/radiocrazy/cgi-bin/dsh_6092/scxml.php',
@@ -319,10 +308,7 @@ class Stations(dict):
           '<div class="doctypes_WR_ipretheadline">(.*)</div>\n<div class="doctypes_WR_titleheadline">(.*)</div>')
       if not text:
         return ''
-      interpret = self.replaceDict(text[0])
-      title = self.replaceDict(text[1])
-      all = interpret + ' - ' + title
-      return self.tunestring(all)
+      return self.tunestring(text[0] + ' - ' + text[1])
 
     def tsf_jazz(self):
       text = self.getsitere('http://www.tsfjazz.com/getSongInformations.php')
