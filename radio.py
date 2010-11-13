@@ -5,7 +5,7 @@
 #  - seamless playing
 #  - greps song names from the net
 #
-# needs:
+# dependencies:
 # aptitude install python-gobject python-gst0.10 gstreamer0.10-plugins-good gstreamer0.10-plugins-bad gstreamer0.10-plugins-ugly
 #
 # http://jochen.sprickerhof.de/software/radio
@@ -211,6 +211,12 @@ class Stations(dict):
       more = self.del_html(text[1])
       return self.tunestring(title + ' - ' + more)
 
+    def fritz(self):
+      text = self.getsitere('http://www.fritz.de/include/frz/nowonair/now_on_air.html', 'titelanzeige"><[^>]*>([^<]*)<')
+      if not text:
+        return ''
+      return self.tunestring(text[0])
+
     def funkhaus_europa(self):
       text = self.getsitere('http://www.funkhauseuropa.de/world_wide_music/playlists/index.phtml',
                             '<!-- PLAYLIST (.*) -->(?:.*\n)*.*Uhr(.*)</td><td>(.*)</td><td>.*<span class="inv"> Minuten</span></td></tr>.*\n.*</table>.*\n.*<!-- //PLAYLIST  -->')
@@ -260,11 +266,11 @@ class Stations(dict):
       return self.tunestring(self.del_html(text[3]))
 
     def on3radio(self):
-      text = self.getsitere('http://www.br-online.de/streaming/on3radio/titel_interpret.xml',
-                            '<titel><!\[CDATA\[(.*)]]></titel>\r\n <interpret><!\[CDATA\[(.*)]]></interpret>')
+      text = self.getsitere('http://on3.de/tracklist/get_tracklist_data',
+                            'active.*?data-header=."([^\\\]*).*? data-title=."([^\\\]*)')
       if not text:
         return ''
-      return self.tunestring(text[1] + ' - ' + text[0])
+      return self.tunestring(text[0] + ' - ' + text[1])
 
     def radio_swiss_jazz(self):
       text = self.getsitere('http://www.radioswissjazz.ch/cgi-bin/pip/html.cgi?m=playlist&v=i&lang=de',
@@ -340,7 +346,7 @@ class Stations(dict):
     self['e'] = Station('1 Live', 'http://www.wdr.de/wdrlive/media/einslive.m3u', einslive)
     self['f'] = Station('Funkhaus Europa', 'http://gffstream.ic.llnwd.net/stream/gffstream_w20a.m3u', funkhaus_europa)
     self['g'] = Station('Das Ding', 'http://mp3-live.dasding.de/dasding_m.m3u', das_ding)
-    self['h'] = Station('Fritz', 'http://www.fritz.de/live.m3u')
+    self['h'] = Station('Fritz', 'http://www.fritz.de/live.m3u', fritz)
     self['i'] = Station('NDR Info', 'http://ndrstream.ic.llnwd.net/stream/ndrstream_ndrinfo_hi_mp3.m3u', ndr_info)
     self['j'] = Station('Jazzradio', 'http://www.jazzradio.net/docs/stream/jazzradio.pls', jazzradio)
     self['k'] = Station('Dradio Kultur', 'http://www.dradio.de/streaming/dkultur_hq_ogg.m3u', dradio)
