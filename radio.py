@@ -168,6 +168,7 @@ class Stations(dict):
           '&#x0022;': '"',
           ':': '-',
           '*': '',
+          'mit': '-',
       }
       text = self.replaceDict(text, einsliveDict)
       if text.count('"') == 1:
@@ -232,7 +233,7 @@ class Stations(dict):
       return self.tunestring(text[0])
 
     def jazzradio(self):
-      text = self.getsitere('http://jazz.radiohaus-berlin.de/jazzradio/playlist/nowplaying.php', '<b>CURRENT: </b><br>(.*) - <i>(.*)</i>')
+      text = self.getsitere('http://jazz.radiohaus-berlin.de/jazzradio/playlist/nowplaying.php', '<b>CURRENT: </b><br>(.*) - (.*)')
       if not text:
         return ''
       return self.tunestring(text[0] + ' - ' + text[1])
