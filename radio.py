@@ -20,7 +20,7 @@ from time import sleep
 from urllib import urlopen
 import socket
 from sys import exit
-from re import search, findall
+from re import search, findall, sub
 from unicodedata import normalize
 import gobject
 import pygst
@@ -68,12 +68,6 @@ class Station(object):
     return string
 
   @staticmethod
-  def del_html(string):
-    while '<' in string:
-      string = string[:string.find('<')] + string[string.find('>') + 1:]
-    return string
-
-  @staticmethod
   def caps(string):
     list = string.split(' ')
     newlist = []
@@ -91,8 +85,8 @@ class Station(object):
     string = cls.replaceDict(string)
     string = string.strip()
     string = string.rstrip()
-    while '  ' in string:
-      string = string.replace('  ', ' ')
+    string = sub('  +', ' ', string)
+    string = sub('<[^>]*>', '', string)
     string = cls.caps(string)
     if string == '-':
       return ''
@@ -117,7 +111,7 @@ class Station(object):
 
   def update(self):
     if self.title:
-      self.akt = self.title(self)
+      self.akt = self.tunestring(self.title(self))
 
   def get_url(self):
     try:
@@ -141,20 +135,20 @@ class Stations(dict):
       text = self.getsitere('http://www.bbc.co.uk/worldservice/', 'on-now"><[^>]*>([^<]*)<')
       if not text:
         return ''
-      return self.tunestring(text[0])
+      return text[0]
 
     def bremenvier(self):
       text = self.getsitere('http://www.radiobremen.de/bremenvier/includes/mediabox.inc.php?c=onair',
           '<sendung>(.*)</sendung>(?:.|\s)*<jetzt>(.*): (.*)</jetzt>')
       if not text:
         return ''
-      return self.tunestring(self.del_comma(text[1]) + ' - ' + text[2] + ' (' + text[0] + ')')
+      return self.del_comma(text[1]) + ' - ' + text[2] + ' (' + text[0] + ')'
 
     def bytefm(self):
       text = self.getsitere('http://www.byte.fm/php/content/home/new.php', 'Aktueller Song:</b></td></tr><tr><td> <a[^>]*>([^<]*)</a>')
       if not text:
         return ''
-      return self.tunestring(text[0])
+      return text[0]
 
     def einslive(self):
       text = self.getsitere('http://www.einslive.de/radiotext/RADIOTXT.TXT')
@@ -179,13 +173,14 @@ class Stations(dict):
         interpret = text[:text.find('"')] + text[text.rfind('"') + 1:]
         interpret = interpret.replace('-', '')
         text = interpret + ' - ' + title
-      return self.tunestring(text)
+      return text
 
     def einslive_diggi(self):
-      text = self.getsitere('http://www.einslive.de/multimedia/diggi/', 'Die letzten 12 Titel(?:[^<]*<[^>]*>){15}([^<]*)</td><td>([^<]*)<')
+      text = self.getsitere('http://www.einslive.de/multimedia/diggi/',
+          'Die letzten 12 Titel(?:[^<]*<[^>]*>){15}([^<]*)</td><td>([^<]*)<')
       if not text:
         return ''
-      return self.tunestring(text[0] + ' - ' + text[1])
+      return text[0] + ' - ' + text[1]
 
     def das_ding(self):
       text = self.getsitere('http://www.dasding.de/ext/playlist/titel_xml.php',
@@ -193,152 +188,143 @@ class Stations(dict):
       if not text:
         return ''
       if not text[1]:
-        return self.tunestring(text[0])
-      return self.tunestring(self.del_comma(text[2]) + ' - ' + text[1] + ' (' + self.tunestring(text[0]) + ')')
+        return text[0]
+      return self.del_comma(text[2]) + ' - ' + text[1] + ' (' + self.tunestring(text[0]) + ')'
 
     def deutschlandfunk(self):
       text = self.getsitere('http://www.dradio.de/jetztimradio/', 'DEUTSCHLANDFUNK.*(?:.*\n){7}(.*)\n(?:.*\n){4}(.*)\n')
       if not text:
         return ''
-      title = self.del_html(text[0])
-      more = self.del_html(text[1])
-      return self.tunestring(title + ' - ' + more)
+      return text[0] + ' - ' + text[1]
 
     def dradio(self):
       text = self.getsitere('http://www.dradio.de/jetztimradio/', 'DEUTSCHLANDRADIO KULTUR.*(?:.*\n){7}(.*)\n(?:.*\n){4}(.*)\n')
       if not text:
         return ''
-      title = self.del_html(text[0])
-      more = self.del_html(text[1])
-      return self.tunestring(title + ' - ' + more)
+      return text[0] + ' - ' + text[1]
 
     def fritz(self):
       text = self.getsitere('http://www.fritz.de/include/frz/nowonair/now_on_air.html', 'titelanzeige"><[^>]*>([^<]*)<')
       if not text:
         return ''
-      return self.tunestring(text[0])
+      return text[0]
 
     def funkhaus_europa(self):
       text = self.getsitere('http://www.funkhauseuropa.de/world_wide_music/playlists/index.phtml',
-                            '<!-- PLAYLIST (.*) -->(?:.*\n)*.*Uhr(.*)</td><td>(.*)</td><td>.*<span class="inv"> Minuten</span></td></tr>.*\n.*</table>.*\n.*<!-- //PLAYLIST  -->')
+          '<!-- PLAYLIST (.*) -->(?:.*\n)*.*Uhr(.*)</td><td>(.*)</td><td>.*<span class="inv"> Minuten</span></td></tr>.*\n.*</table>.*\n.*<!-- //PLAYLIST  -->')
       if not text:
         return ''
-      interpret = self.del_html(text[1])
-      return self.tunestring(interpret + ' - ' + text[2] + ' (' + text[0] + ')')
+      return text[1] + ' - ' + text[2] + ' (' + text[0] + ')'
 
     def groovefm(self):
       text = self.getsitere('http://www.groovefm.de/playlist', 'Aktueller Track.*\n([^<]*)<')
       if not text:
         return ''
-      return self.tunestring(text[0])
+      return text[0]
 
     def jazzradio(self):
       text = self.getsitere('http://jazz.radiohaus-berlin.de/jazzradio/playlist/nowplaying.php', '<b>CURRENT: </b><br>(.*) - (.*)')
       if not text:
         return ''
-      return self.tunestring(text[0] + ' - ' + text[1])
+      return text[0] + ' - ' + text[1]
 
     def lounge_radio(self):
-      text = self.getsitere('http://www.lounge-radio.com/code/pushed_files/now.html', 'Artist:.*\n.*<div>(.*)</div>.*\n(?:.*\n){2}.*Track:.*\n.*<div>(.*)</div>')
+      text = self.getsitere('http://www.lounge-radio.com/code/pushed_files/now.html',
+          'Artist:.*\n.*<div>(.*)</div>.*\n(?:.*\n){2}.*Track:.*\n.*<div>(.*)</div>')
       if not text:
         return ''
-      return self.tunestring(text[0] + ' - ' + text[1])
+      return text[0] + ' - ' + text[1]
 
     def n_joy(self):
       text = self.getsitere('http://www.ndr.de/n-joy/onaircenter103-onaircenterpopup.html', 'webradio_song_now">(.*)</td>')
       if not text:
         return ''
-      return self.tunestring(text[0])
+      return text[0]
 
     def ndr_info(self):
       text = self.getsitere('http://www.ndrinfo.de/', 'NDR Info Radio-Box(?:.*\n){2}(.*)\n')
       if not text:
         return ''
-      title = self.del_html(text[0])
-      return self.tunestring(title)
+      return text[0]
 
     def nordwestradio(self):
       text = self.getsitere('http://www.radiobremen.de/extranet/playlist/nowplaying_nwr.xml',
-                            '<strong>(.*)</strong>.*\n.*Titel: "(.*)"<br />\nVon: (.*)</p>|<strong>(.*)</strong>')
+          '<strong>(.*)</strong>.*\n.*Titel: "(.*)"<br />\nVon: (.*)</p>|<strong>(.*)</strong>')
       if not text:
         return ''
       if text[0]:
-        return self.tunestring(text[1] + ' - ' + self.del_comma(text[2]) + ' (' + self.del_html(text[0]) + ')')
-      return self.tunestring(self.del_html(text[3]))
+        return text[1] + ' - ' + self.del_comma(text[2]) + ' (' + text[0] + ')'
+      return text[3]
 
     def on3radio(self):
       text = self.getsitere('http://on3.de/tracklist/get_tracklist_data',
-                            'active.*?data-header=."([^\\\]*).*? data-title=."([^\\\]*)')
+          'active.*?data-header=."([^\\\]*).*? data-title=."([^\\\]*)')
       if not text:
         return ''
-      return self.tunestring(text[0] + ' - ' + text[1])
+      return text[0] + ' - ' + text[1]
 
     def radio_swiss_jazz(self):
       text = self.getsitere('http://www.radioswissjazz.ch/cgi-bin/pip/html.cgi?m=playlist&v=i&lang=de',
           '<tr class="on">(?:.*\n){5}.*>(.*)</strong><br />(.*)</a></td>\n')
       if not text:
         return ''
-      return self.tunestring(text[1] + ' - ' + text[0])
+      return text[1] + ' - ' + text[0]
 
     def radio_swiss_pop(self):
       text = self.getsitere('http://www.radioswisspop.ch/cgi-bin/pip/html.cgi?m=playlist&v=i&lang=de',
           '<tr class="on">(?:.*\n){5}.*>(.*)</strong><br />(.*)</a></td>\n')
       if not text:
         return ''
-      return self.tunestring(text[1] + ' - ' + text[0])
+      return text[1] + ' - ' + text[0]
 
     def swiss_groove(self):
-      text = self.getsitere('http://www.swissgroove.ch/de/music/', 'AKTUELL GESPIELT(?:.*\n){8}.*Künstler: &nbsp;(.*)<br />\n.*Lied: &nbsp;(.*)<br />')
+      text = self.getsitere('http://www.swissgroove.ch/de/music/',
+          'AKTUELL GESPIELT(?:.*\n){8}.*Künstler: &nbsp;(.*)<br />\n.*Lied: &nbsp;(.*)<br />')
       if not text:
         return ''
-      return self.tunestring(text[0] + ' - ' + text[1])
+      return text[0] + ' - ' + text[1]
 
     def smooth_jazz(self):
       text = self.getsitere('http://smoothjazz.com/playlist/', 'ARTIST[^\r]*\r([^\r]*)\r(?:[^\r]*\r){7}([^\r]*)\r')
       if not text:
         return ''
-      interpret = self.del_html(text[0])
-      title = self.del_html(text[1])
-      title = title.replace(' - HOT PICK', '')
-      return self.tunestring(interpret + ' - ' + title)
+      title = text[1].replace(' - HOT PICK', '')
+      return text[0] + ' - ' + title
 
     def swiss_radio_jazz(self):
       text = self.getsitere('http://www.cogg.de/radiocrazy/cgi-bin/dsh_6092/scxml.php',
           'Current Song(?:.*\n){10}(.*)\n')
       if not text:
         return ''
-      title = self.del_html(text[0])
-      return self.tunestring(title)
+      return text[0]
 
     def swr3(self):
       text = self.getsitere('http://www.swr3.de/-/id=66332/12w4f32/index.html',
           '<div class="doctypes_WR_ipretheadline">(.*)</div>\n<div class="doctypes_WR_titleheadline">(.*)</div>')
       if not text:
         return ''
-      return self.tunestring(text[0] + ' - ' + text[1])
+      return text[0] + ' - ' + text[1]
 
     def tsf_jazz(self):
       text = self.getsitere('http://www.tsfjazz.com/getSongInformations.php')
       if not text:
         return ''
       text = text.replace('|', ' - ')
-      return self.tunestring(text)
+      return text
 
     def wdr5(self):
       text = self.getsitere('http://www.wdr5.de/programm.html', '<tr class="(?:even|odd) aktuell">(?:.*\n){5}(.*)\n')
       if not text:
         return ''
-      title = self.del_html(text[0])
-      title = title.replace('WDR 5', '')
-      return self.tunestring(title)
+      title = text[0].replace('WDR 5', '')
+      return title
 
     def tv_ndr(self):
       text = self.getsitere('http://www.ndr.de/home/index.html',
           'JETZT IM NDR FERNSEHEN(?:.*\n){,10}<h2>(.*)\n')
       if not text:
         return ''
-      title = self.del_html(text[0])
-      return self.tunestring(title)
+      return text[0]
 
     self['a'] = Station('Byte.fm', 'http://www.byte.fm/stream/bytefm.m3u', bytefm)
     self['b'] = Station('Bremen 4', 'http://www.radiobremen.de/stream/live/bremenvier.m3u', bremenvier)
