@@ -43,6 +43,7 @@ class Station(object):
       '&Uuml;': 'Ue',
       '&szlig;': 'ß',
       '&apos;': "'",
+      '&eacute;': "é",
       '&#x27;': "'",
       '&#39;': "'",
       '&#039;': "'",
