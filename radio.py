@@ -300,13 +300,6 @@ class Stations(dict):
         return ''
       return text[0]
 
-    def swr3(self):
-      text = self.getsitere('http://www.swr3.de/-/id=66332/12w4f32/index.html',
-          '<div class="doctypes_WR_ipretheadline">(.*)</div>\n<div class="doctypes_WR_titleheadline">(.*)</div>')
-      if not text:
-        return ''
-      return text[0] + ' - ' + text[1]
-
     def tsf_jazz(self):
       text = self.getsitere('http://www.tsfjazz.com/getSongInformations.php')
       if not text:
@@ -346,7 +339,7 @@ class Stations(dict):
     self['p'] = Station('Radio Swiss Pop', 'http://www.radioswisspop.ch/live/mp3.m3u', radio_swiss_pop)
     self['q'] = Station('Nordwestradio globale Dorfmusik', 'http://80.252.104.101:8000/globaledorfmusik.m3u')
     self['r'] = Station('Swiss Radio Jazz', 'http://www.swissradio.ch/streams/6092.m3u', swiss_radio_jazz)
-    self['s'] = Station('SWR 3', 'http://www.swr3.de/wraps/swr3_mp3.m3u.php', swr3)
+    self['s'] = Station('NDR Blue', 'http://www.ndr.de/resources/metadaten/audio/m3u/ndrblue.m3u')
     self['t'] = Station('TSF Jazz', 'http://broadcast.infomaniak.ch/tsfjazz-high.mp3.pls', tsf_jazz)
     self['u'] = Station('BBC World Service', 'http://www.bbc.co.uk/worldservice/meta/tx/nb/live/eneuk.pls', bbc)
     self['v'] = Station('Lounge Radio', 'http://www.lounge-radio.com/listen128.m3u', lounge_radio)
