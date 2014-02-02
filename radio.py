@@ -6,12 +6,12 @@
 #  - greps song names from the net
 #
 # dependencies:
-# aptitude install python-gobject python-gst0.10 gstreamer0.10-plugins-good gstreamer0.10-plugins-bad gstreamer0.10-plugins-ugly
+# aptitude install python-gi gir1.2-gst-plugins-base-1.0 gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-alsa
 #
 # http://jochen.sprickerhof.de/software/radio
 #
 # (c) 2008-03-17 Jochen Sprickerhof <jochen at sprickerhof.de>
-# (c) 2008-2010 Jochen Sprickerhof <jochen at sprickerhof.de>
+# (c) 2008-2014 Jochen Sprickerhof <jochen at sprickerhof.de>
 
 from optparse import OptionParser
 import curses
@@ -21,11 +21,9 @@ from urllib import urlopen
 import socket
 from sys import exit
 from re import search, findall, sub
-from unicodedata import normalize
-import gobject
-import pygst
-pygst.require('0.10')
-import gst
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import GObject, Gst
 
 class Station(object):
   def __init__(self, name, url, title = None):
@@ -434,9 +432,7 @@ class Screen(object):
       self.screen.addstr('slide')
     else:
       self.screen.addstr('slide', curses.color_pair(2))
-    self.screen.addstr(', S: stop, Q: quit, up/down: next/prev')
-    x += 1
-    self.screen.addstr(x, 0, 'left/right: seek -/+ 10sec, shift-left/right: seek -/+ 2sec, space: pause')
+    self.screen.addstr(', S: stop, space: pause, Q: quit, up/down: next/prev')
     self.screen.refresh()
     
 class GstPlayer(object):
@@ -445,54 +441,48 @@ class GstPlayer(object):
     self.screen = screen
     self.oldPlayer = oldPlayer
 
-    self.player = gst.element_factory_make('playbin')
+    self.player = Gst.ElementFactory.make('playbin', None)
     bus = self.player.get_bus()
     bus.add_signal_watch()
-    bus.connect('message', self.on_message)
+    bus.connect('message::eos', self.on_eos)
+    bus.connect('message::error', self.on_error)
+    bus.connect('message::state-changed', self.on_state_changed)
+    bus.connect('message::tag', self.on_tag)
 
     url = self.station.get_url()
     if url:
       self.player.set_property('uri', url)
-      self.player.set_state(gst.STATE_PLAYING)
+      self.player.set_state(Gst.State.PLAYING)
 
-  def on_message(self, bus, message):
-    t = message.type
-    if t == gst.MESSAGE_EOS:
-      self.player.set_state(gst.STATE_NULL)
-    elif t == gst.MESSAGE_ERROR:
-      self.player.set_state(gst.STATE_NULL)
-      (err, debug) = message.parse_error()
-      print 'Error: %s' % err
-    elif t == gst.MESSAGE_BUFFERING:
-      percent = message.parse_buffering()
-      #print percent
-    elif t == gst.MESSAGE_STATE_CHANGED:
-      old, new, pending = message.parse_state_changed() 
-      if message.src == self.player and new == gst.STATE_PLAYING:
-        self.screen.akt = self.screen.next
-        self.screen.next = None
-        if self.oldPlayer:
-          self.oldPlayer.stop()
-    elif t == gst.MESSAGE_TAG:
-      taglist = message.parse_tag()
-      if 'title' in taglist:
-        self.station.akt = normalize('NFKD', unicode(taglist['title'])).encode('ASCII', 'ignore')[:100] #TODO: changes stream with jazzradio wtf
+  def on_eos(self, bus, message):
+    self.player.set_state(Gst.State.NULL)
+
+  def on_error(self, bus, message):
+    self.player.set_state(Gst.State.NULL)
+
+  def on_state_changed(self, bus, message):
+    old, new, pending = message.parse_state_changed()
+    if message.src == self.player and new == Gst.State.PLAYING:
+      self.screen.akt = self.screen.next
+      self.screen.next = None
+      if self.oldPlayer:
+        self.oldPlayer.stop()
+
+  def on_tag(self, bus, message):
+    tag, title = message.parse_tag().get_string('title')
+    if tag:
+      self.station.akt = title
 
   def stop(self):
     if(self.oldPlayer):
       self.oldPlayer.stop()
-    self.player.set_state(gst.STATE_NULL)
+    self.player.set_state(Gst.State.NULL)
 
   def pause(self):
-    if self.player.get_state()[1] == gst.STATE_PLAYING:
-      self.player.set_state(gst.STATE_PAUSED)
+    if self.player.get_state(Gst.CLOCK_TIME_NONE).state == Gst.State.PLAYING:
+      self.player.set_state(Gst.State.PAUSED)
     else:
-      self.player.set_state(gst.STATE_PLAYING)
-
-  def seek(self, val):
-    pos_int = self.player.query_position(self.time_format, None)[0]
-    seek_ns = pos_int - (val * 1000000000)
-    self.player.seek_simple(self.time_format, gst.SEEK_FLAG_FLUSH, seek_ns)
+      self.player.set_state(Gst.State.PLAYING)
 
 class Player(object):
   player = None
@@ -518,9 +508,6 @@ class Player(object):
 
   def pause(self):
     self.player.pause()
-
-  def seek(self, val):
-    self.player.seek(val)
 
   def slide(self):
     if not self.screen.slide_stop:
@@ -597,14 +584,6 @@ def cur_main(screen, loop, update = 30, station = None):
       plr.pref()
     elif key == curses.KEY_DOWN:
       plr.next()
-    elif key == curses.KEY_LEFT:
-      plr.seek(-10)
-    elif key == curses.KEY_RIGHT:
-      plr.seek(10)
-    elif key == curses.KEY_SLEFT:
-      plr.seek(-2)
-    elif key == curses.KEY_SRIGHT:
-      plr.seek(2)
 
 def grab(station, update):
   stations = Stations()
@@ -638,8 +617,9 @@ def main():
     if not options.update:
       options.update = 30
     try:
-      gobject.threads_init()
-      loop = gobject.MainLoop()
+      GObject.threads_init()
+      Gst.init(None)
+      loop = GObject.MainLoop()
       Thread(target = curses.wrapper, args = (cur_main, loop, options.update, options.station)).start()
       loop.run()
     except (ScreenSizeError, StationKeyError), e:
