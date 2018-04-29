@@ -1,12 +1,11 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/usr/bin/python3
 #
 # Web Radio Station Tuner
 #  - seamless playing
 #  - greps song names from the net
 #
 # dependencies:
-# aptitude install python-gi gir1.2-gst-plugins-base-1.0 gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-alsa
+# aptitude install python3-gi gir1.2-gst-plugins-base-1.0 gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-alsa
 #
 # http://jochen.sprickerhof.de/software/radio
 #
@@ -17,7 +16,7 @@ from optparse import OptionParser
 import curses
 from threading import Thread
 from time import sleep
-from urllib import urlopen
+from urllib.request import urlopen
 import socket
 from sys import exit
 from re import search, findall, sub
@@ -100,7 +99,7 @@ class Station(object):
   @staticmethod
   def getsitere(url, reg=None):
     try:
-      site = urlopen(url).read()  # limit read(100)
+      site = urlopen(url).read().decode('utf-8')  # limit read(100)
     except (Exception, socket.error):
       return None
     if not reg:
@@ -121,7 +120,7 @@ class Station(object):
     if self.url.endswith('listen'):  # for jazzradio
       return self.url
     try:
-      site = urlopen(self.url).read()  # read(100)!
+      site = urlopen(self.url).read().decode('utf-8')  # read(100)!
     except IOError:
       return None
     if self.url.endswith('wax'):
@@ -139,20 +138,20 @@ class Stations(dict):
     dict.__init__(self)
 
     def bbc(self):
-      text = self.getsitere('http://www.bbc.co.uk/worldservice/', 'on-now"><[^>]*>([^<]*)<')
+      text = self.getsitere('http://www.bbc.co.uk/worldservice/', r'on-now"><[^>]*>([^<]*)<')
       if not text:
         return ''
       return text[0]
 
     def bremenvier(self):
       text = self.getsitere('http://www.radiobremen.de/bremenvier/includes/mediabox.inc.php?c=onair',
-          '<sendung>(.*)</sendung>(?:.|\s)*<jetzt>(.*): (.*)</jetzt>')
+                            r'<sendung>(.*)</sendung>(?:.|\s)*<jetzt>(.*): (.*)</jetzt>')
       if not text:
         return ''
       return self.del_comma(text[1]) + ' - ' + text[2] + ' (' + text[0] + ')'
 
     def bytefm(self):
-      text = self.getsitere('http://www.byte.fm/php/content/home/new.php', 'Aktueller Song:</b></td></tr><tr><td> <a[^>]*>([^<]*)</a>')
+      text = self.getsitere('http://www.byte.fm/php/content/home/new.php', r'Aktueller Song:</b></td></tr><tr><td> <a[^>]*>([^<]*)</a>')
       if not text:
         return ''
       return text[0]
@@ -184,14 +183,14 @@ class Stations(dict):
 
     def einslive_diggi(self):
       text = self.getsitere('http://www.einslive.de/multimedia/diggi/',
-          'Die letzten 12 Titel(?:[^<]*<[^>]*>){15}([^<]*)</td><td>([^<]*)<')
+                            r'Die letzten 12 Titel(?:[^<]*<[^>]*>){15}([^<]*)</td><td>([^<]*)<')
       if not text:
         return ''
       return text[0] + ' - ' + text[1]
 
     def das_ding(self):
       text = self.getsitere('http://www.dasding.de/ext/playlist/titel_xml.php',
-          '<name>(.*)</name>(?:.*\n)+.*<song>(.*)</song>(?:.*\n)+.*<artist>(.*)</artist>(?:.*\n)+.*</current>')
+                            r'<name>(.*)</name>(?:.*\n)+.*<song>(.*)</song>(?:.*\n)+.*<artist>(.*)</artist>(?:.*\n)+.*</current>')
       if not text:
         return ''
       if not text[1]:
@@ -199,51 +198,51 @@ class Stations(dict):
       return self.del_comma(text[2]) + ' - ' + text[1] + ' (' + self.tunestring(text[0]) + ')'
 
     def deutschlandfunk(self):
-      text = self.getsitere('http://www.dradio.de/jetztimradio/', 'DEUTSCHLANDFUNK.*(?:.*\n){7}(.*)\n(?:.*\n){4}(.*)\n')
+      text = self.getsitere('http://www.dradio.de/jetztimradio/', r'DEUTSCHLANDFUNK.*(?:.*\n){7}(.*)\n(?:.*\n){4}(.*)\n')
       if not text:
         return ''
       return text[0] + ' - ' + text[1]
 
     def dradio(self):
-      text = self.getsitere('http://www.dradio.de/jetztimradio/', 'DEUTSCHLANDRADIO KULTUR.*(?:.*\n){7}(.*)\n(?:.*\n){4}(.*)\n')
+      text = self.getsitere('http://www.dradio.de/jetztimradio/', r'DEUTSCHLANDRADIO KULTUR.*(?:.*\n){7}(.*)\n(?:.*\n){4}(.*)\n')
       if not text:
         return ''
       return text[0] + ' - ' + text[1]
 
     def fritz(self):
-      text = self.getsitere('http://www.fritz.de/include/frz/nowonair/now_on_air.html', 'titelanzeige"><[^>]*>([^<]*)<')
+      text = self.getsitere('http://www.fritz.de/include/frz/nowonair/now_on_air.html', r'titelanzeige"><[^>]*>([^<]*)<')
       if not text:
         return ''
       return text[0]
 
     def groovefm(self):
-      text = self.getsitere('http://www.groovefm.de/playlist', 'Aktueller Track.*\n([^<]*)<')
+      text = self.getsitere('http://www.groovefm.de/playlist', r'Aktueller Track.*\n([^<]*)<')
       if not text:
         return ''
       return text[0]
 
     def lounge_radio(self):
       text = self.getsitere('http://www.lounge-radio.com/code/pushed_files/now.html',
-          'Artist:.*\n.*<div>(.*)</div>.*\n(?:.*\n){2}.*Track:.*\n.*<div>(.*)</div>')
+                            r'Artist:.*\n.*<div>(.*)</div>.*\n(?:.*\n){2}.*Track:.*\n.*<div>(.*)</div>')
       if not text:
         return ''
       return text[0] + ' - ' + text[1]
 
     def n_joy(self):
-      text = self.getsitere('http://www.ndr.de/n-joy/onaircenter103-onaircenterpopup.html', 'webradio_song_now">(.*)</td>')
+      text = self.getsitere('http://www.ndr.de/n-joy/onaircenter103-onaircenterpopup.html', r'webradio_song_now">(.*)</td>')
       if not text:
         return ''
       return text[0]
 
     def ndr_info(self):
-      text = self.getsitere('http://www.ndrinfo.de/', 'NDR Info Radio-Box(?:.*\n){2}(.*)\n')
+      text = self.getsitere('http://www.ndrinfo.de/', r'NDR Info Radio-Box(?:.*\n){2}(.*)\n')
       if not text:
         return ''
       return text[0]
 
     def nordwestradio(self):
       text = self.getsitere('http://www.radiobremen.de/extranet/playlist/nowplaying_nwr.xml',
-          '<strong>(.*)</strong>.*\n.*Titel: "(.*)"<br />\nVon: (.*)</p>|<strong>(.*)</strong>')
+                            r'<strong>(.*)</strong>.*\n.*Titel: "(.*)"<br />\nVon: (.*)</p>|<strong>(.*)</strong>')
       if not text:
         return ''
       if text[0]:
@@ -252,27 +251,27 @@ class Stations(dict):
 
     def radio_swiss_jazz(self):
       text = self.getsitere('http://www.radioswissjazz.ch/cgi-bin/pip/html.cgi?m=playlist&v=i&lang=de',
-          '<tr class="on">(?:.*\n){5}.*>(.*)</strong><br />(.*)</a></td>\n')
+                            r'<tr class="on">(?:.*\n){5}.*>(.*)</strong><br />(.*)</a></td>\n')
       if not text:
         return ''
       return text[1] + ' - ' + text[0]
 
     def radio_swiss_pop(self):
       text = self.getsitere('http://www.radioswisspop.ch/cgi-bin/pip/html.cgi?m=playlist&v=i&lang=de',
-          '<tr class="on">(?:.*\n){5}.*>(.*)</strong><br />(.*)</a></td>\n')
+                            r'<tr class="on">(?:.*\n){5}.*>(.*)</strong><br />(.*)</a></td>\n')
       if not text:
         return ''
       return text[1] + ' - ' + text[0]
 
     def swiss_groove(self):
       text = self.getsitere('http://www.swissgroove.ch/de/music/',
-          'AKTUELL GESPIELT(?:.*\n){8}.*Künstler: &nbsp;(.*)<br />\n.*Lied: &nbsp;(.*)<br />')
+                            r'AKTUELL GESPIELT(?:.*\n){8}.*Künstler: &nbsp;(.*)<br />\n.*Lied: &nbsp;(.*)<br />')
       if not text:
         return ''
       return text[0] + ' - ' + text[1]
 
     def smooth_jazz(self):
-      text = self.getsitere('http://smoothjazz.com/playlist/', 'ARTIST[^\r]*\r([^\r]*)\r(?:[^\r]*\r){7}([^\r]*)\r')
+      text = self.getsitere('http://smoothjazz.com/playlist/', r'ARTIST[^\r]*\r([^\r]*)\r(?:[^\r]*\r){7}([^\r]*)\r')
       if not text:
         return ''
       title = text[1].replace(' - HOT PICK', '')
@@ -280,7 +279,7 @@ class Stations(dict):
 
     def swiss_radio_jazz(self):
       text = self.getsitere('http://www.cogg.de/radiocrazy/cgi-bin/dsh_6092/scxml.php',
-          'Current Song(?:.*\n){10}(.*)\n')
+                            r'Current Song(?:.*\n){10}(.*)\n')
       if not text:
         return ''
       return text[0]
@@ -293,7 +292,7 @@ class Stations(dict):
       return text
 
     def wdr5(self):
-      text = self.getsitere('http://www.wdr5.de/programm.html', '<tr class="(?:even|odd) aktuell">(?:.*\n){5}(.*)\n')
+      text = self.getsitere('http://www.wdr5.de/programm.html', r'<tr class="(?:even|odd) aktuell">(?:.*\n){5}(.*)\n')
       if not text:
         return ''
       title = text[0].replace('WDR 5', '')
@@ -328,9 +327,6 @@ class Stations(dict):
 
   def keys(self):
     return sorted(dict.keys(self))
-
-  def __iter__(self):
-    return iter(self.keys())
 
 
 class Screen(object):
@@ -376,7 +372,7 @@ class Screen(object):
 
   def grabber(self):
     while True:
-      map(lambda x: x.update(), self.stations.values())
+      [x.update() for x in self.stations.values()]
       self.redraw()
       sleep(self.update)
 
@@ -395,7 +391,7 @@ class Screen(object):
     for i in self.stations:
       if i == self.akt:
         color = 1
-        print '\033]0;%s: %s\007' % (self.stations[i].name, self.stations[i].akt)
+        print('\033]0;%s: %s\007' % (self.stations[i].name, self.stations[i].akt))
       elif i == self.next:
         color = 2
       else:
@@ -405,7 +401,7 @@ class Screen(object):
       self.screen.addstr(x, 21, self.stations[i].akt)
       x += 1
     if not self.akt:
-      print '\033]0;Radio\007'
+      print('\033]0;Radio\007')
     x += 1
     self.screen.addstr(x, 0, 'R: redraw, T: ')
     if self.slide_stop:
@@ -548,23 +544,21 @@ def cur_main(screen, loop, update=30, station=None):
       raise StationKeyError('Station %s not found' % station)
 
   while True:
-    key = screen.getch()
-    if 0 < key < 256:
-      key = chr(key)
-      if key == 'Q':
-        screen.clear()
-        loop.quit()
-        break
-      elif key == 'R':
-        plr.screen.redraw()
-      elif key == 'T':
-        plr.slide()
-      elif key == 'S':
-        plr.stop()
-      elif key == ' ':
-        plr.pause()
-      elif key in plr.screen.stations:
-        plr.tune(key)
+    key = screen.get_wch()
+    if key == 'Q':
+      screen.clear()
+      loop.quit()
+      break
+    elif key == 'R':
+      plr.screen.redraw()
+    elif key == 'T':
+      plr.slide()
+    elif key == 'S':
+      plr.stop()
+    elif key == ' ':
+      plr.pause()
+    elif key in plr.screen.stations:
+      plr.tune(key)
     elif key == curses.KEY_UP:
       plr.pref()
     elif key == curses.KEY_DOWN:
@@ -580,10 +574,10 @@ def grab(station, update):
     try:
       for i in station:
         if i not in stations:
-          print 'Station %s not found' % i
+          print('Station %s not found' % i)
           exit(2)
         stations[i].update()
-        print stations[i].name + ': ' + stations[i].akt
+        print(stations[i].name + ': ' + stations[i].akt)
       sleep(update)
     except KeyboardInterrupt:
       break
@@ -609,8 +603,8 @@ def main():
       loop = GObject.MainLoop()
       Thread(target=curses.wrapper, args=(cur_main, loop, options.update, options.station)).start()
       loop.run()
-    except (ScreenSizeError, StationKeyError), e:
-      print e
+    except (ScreenSizeError, StationKeyError) as e:
+      print(e)
       exit(2)
 
 
