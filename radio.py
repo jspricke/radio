@@ -115,6 +115,11 @@ class Station(object):
       self.akt = self.tunestring(self.title(self))
 
   def get_url(self):
+    """ workaround for playlists"""
+    if self.url.endswith('mp3'):
+      return self.url
+    if self.url.endswith('listen'):  # for jazzradio
+      return self.url
     try:
       site = urlopen(self.url).read()  # read(100)!
     except IOError:
