@@ -211,24 +211,11 @@ class Stations(dict):
         return ''
       return text[0]
 
-    def funkhaus_europa(self):
-      text = self.getsitere('http://www.funkhauseuropa.de/world_wide_music/playlists/index.phtml',
-          '<!-- PLAYLIST (.*) -->(?:.*\n)*.*Uhr(.*)</td><td>(.*)</td><td>.*<span class="inv"> Minuten</span></td></tr>.*\n.*</table>.*\n.*<!-- //PLAYLIST  -->')
-      if not text:
-        return ''
-      return text[1] + ' - ' + text[2] + ' (' + text[0] + ')'
-
     def groovefm(self):
       text = self.getsitere('http://www.groovefm.de/playlist', 'Aktueller Track.*\n([^<]*)<')
       if not text:
         return ''
       return text[0]
-
-    def jazzradio(self):
-      text = self.getsitere('http://jazz.radiohaus-berlin.de/jazzradio/playlist/nowplaying.php', '<b>CURRENT: </b><br>(.*) - (.*)')
-      if not text:
-        return ''
-      return text[0] + ' - ' + text[1]
 
     def lounge_radio(self):
       text = self.getsitere('http://www.lounge-radio.com/code/pushed_files/now.html',
@@ -257,13 +244,6 @@ class Stations(dict):
       if text[0]:
         return text[1] + ' - ' + self.del_comma(text[2]) + ' (' + text[0] + ')'
       return text[3]
-
-    def on3radio(self):
-      text = self.getsitere('http://on3.de/tracklist/get_tracklist_data',
-          'active.*?data-header=."([^\\\]*).*? data-title=."([^\\\]*)')
-      if not text:
-        return ''
-      return text[0] + ' - ' + text[1]
 
     def radio_swiss_jazz(self):
       text = self.getsitere('http://www.radioswissjazz.ch/cgi-bin/pip/html.cgi?m=playlist&v=i&lang=de',
@@ -314,30 +294,23 @@ class Stations(dict):
       title = text[0].replace('WDR 5', '')
       return title
 
-    def tv_ndr(self):
-      text = self.getsitere('http://www.ndr.de/home/index.html',
-          'JETZT IM NDR FERNSEHEN(?:.*\n){,10}<h2>(.*)\n')
-      if not text:
-        return ''
-      return text[0]
-
     self['a'] = Station('Byte.fm', 'http://www.byte.fm/stream/bytefm.m3u', bytefm)
     self['b'] = Station('Bremen 4', 'http://httpmedia.radiobremen.de/bremenvier.m3u', bremenvier)
-    self['c'] = Station('on3Radio', 'http://streams.br-online.de/jugend-radio_2.m3u', on3radio)
+    self['c'] = Station('Cosmo', 'https://wdr-cosmo-live.icecastssl.wdr.de/wdr/cosmo/live/mp3/128/stream.mp3')
     self['d'] = Station('Deutschlandfunk', 'http://www.dradio.de/streaming/dlf_hq_ogg.m3u', deutschlandfunk)
     self['e'] = Station('1 Live', 'http://www.wdr.de/wdrlive/media/einslive.m3u', einslive)
-    self['f'] = Station('Funkhaus Europa', 'http://gffstream.ic.llnwd.net/stream/gffstream_w20a.m3u', funkhaus_europa)
+    self['f'] = Station('Dfunk Nova', 'http://st03.dlf.de/dlf/03/128/mp3/stream.mp3')
     self['g'] = Station('Das Ding', 'http://mp3-live.dasding.de/dasding_m.m3u', das_ding)
     self['h'] = Station('Fritz', 'http://www.fritz.de/live.m3u', fritz)
     self['i'] = Station('NDR Info', 'http://www.ndr.de/resources/metadaten/audio/m3u/ndrinfo.m3u', ndr_info)
-    self['j'] = Station('Jazzradio', 'http://www.jazzradio.net/docs/stream/jazzradio.pls', jazzradio)
+    self['j'] = Station('Jazzradio', 'https://streaming.radio.co/s774887f7b/listen')
     self['k'] = Station('Dradio Kultur', 'http://www.dradio.de/streaming/dkultur_hq_ogg.m3u', dradio)
     self['l'] = Station('1 Live diggi', 'http://www.wdr.de/wdrlive/media/einslivedigi.m3u', einslive_diggi)
     self['m'] = Station('Smooth Jazz', 'http://smoothjazz.com/streams/smoothjazz_128.pls', smooth_jazz)
-    self['n'] = Station('Nordwestradio', 'http://httpmedia.radiobremen.de/nordwestradio.m3u', nordwestradio)
+    self['n'] = Station('Bremen Zwei', 'http://dl-ondemand.radiobremen.de/bremenzwei.m3u', nordwestradio)
     self['o'] = Station('Groove FM', 'http://stream.groovefm.de:10028/listen.pls', groovefm)
     self['p'] = Station('Radio Swiss Pop', 'http://www.radioswisspop.ch/live/mp3.m3u', radio_swiss_pop)
-    self['q'] = Station('Nordwestradio Sounds', 'http://webchannel.radiobremen.de:8000/nordwestradio-sounds.m3u')
+    self['q'] = Station('Bremen Zwei Sounds', 'http://webchannel.radiobremen.de:8000/bremenzwei-sounds.m3u')
     self['r'] = Station('Swiss Radio Jazz', 'http://www.swissradio.ch/streams/6092.m3u', swiss_radio_jazz)
     self['s'] = Station('NDR Blue', 'http://www.ndr.de/resources/metadaten/audio/m3u/ndrblue.m3u')
     self['t'] = Station('TSF Jazz', 'http://statslive.infomaniak.ch/playlist/tsfjazz/tsfjazz-high.mp3/playlist.pls', tsf_jazz)
@@ -347,7 +320,6 @@ class Stations(dict):
     self['x'] = Station('Swiss Groove', 'http://swissgroove.com/listen.php?player=pls', swiss_groove)
     self['y'] = Station('N-Joy', 'http://ndrstream.ic.llnwd.net/stream/ndrstream_n-joy_hi_mp3.m3u', n_joy)
     self['z'] = Station('Radio Swiss Jazz', 'http://www.radioswissjazz.ch/live/mp3.m3u', radio_swiss_jazz)
-    self['za'] = Station('TV NDR', '', tv_ndr)
 
   def keys(self):
     return sorted(dict.keys(self))
