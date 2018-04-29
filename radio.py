@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # Web Radio Station Tuner
@@ -11,7 +11,7 @@
 # http://jochen.sprickerhof.de/software/radio
 #
 # (c) 2008-03-17 Jochen Sprickerhof <jochen at sprickerhof.de>
-# (c) 2008-2014 Jochen Sprickerhof <jochen at sprickerhof.de>
+# (c) 2008-2018 Jochen Sprickerhof <jochen at sprickerhof.de>
 
 from optparse import OptionParser
 import curses
@@ -25,8 +25,9 @@ import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import GObject, Gst
 
+
 class Station(object):
-  def __init__(self, name, url, title = None):
+  def __init__(self, name, url, title=None):
     self.name = name
     self.url = url
     self.title = title
@@ -55,7 +56,7 @@ class Station(object):
   }
 
   @staticmethod
-  def replaceDict(string, dict = htmlDict):
+  def replaceDict(string, dict=htmlDict):
     for key in dict:
       string = string.replace(key, dict[key])
     return string
@@ -63,7 +64,7 @@ class Station(object):
   @staticmethod
   def del_comma(string):
     string = string.replace(', ', ',')
-    if ',' in string and not '&' in string and not ';' in string:
+    if ',' in string and '&' not in string and ';' not in string:
       string = string[string.find(',') + 1:] + ' ' + string[:string.find(',')]
     return string
 
@@ -97,9 +98,9 @@ class Station(object):
     return string
 
   @staticmethod
-  def getsitere(url, reg = None):
+  def getsitere(url, reg=None):
     try:
-      site = urlopen(url).read() # limit read(100)
+      site = urlopen(url).read()  # limit read(100)
     except (Exception, socket.error):
       return None
     if not reg:
@@ -115,7 +116,7 @@ class Station(object):
 
   def get_url(self):
     try:
-      site = urlopen(self.url).read() # read(100)!
+      site = urlopen(self.url).read()  # read(100)!
     except IOError:
       return None
     if self.url.endswith('wax'):
@@ -126,6 +127,7 @@ class Station(object):
       return uris[0]
     else:
       return None
+
 
 class Stations(dict):
   def __init__(self):
@@ -353,6 +355,7 @@ class Stations(dict):
   def __iter__(self):
     return iter(self.keys())
 
+
 class Screen(object):
   __akt = None
   __next = None
@@ -389,7 +392,7 @@ class Screen(object):
   def __init__(self, screen, update):
     self.screen = screen
     self.update = update
-    thread = Thread(target = self.grabber)
+    thread = Thread(target=self.grabber)
     thread.setDaemon(True)
     thread.start()
     self.redraw()
@@ -434,9 +437,10 @@ class Screen(object):
       self.screen.addstr('slide', curses.color_pair(2))
     self.screen.addstr(', S: stop, space: pause, Q: quit, up/down: next/prev')
     self.screen.refresh()
-    
+
+
 class GstPlayer(object):
-  def __init__(self, station, screen, oldPlayer = None):
+  def __init__(self, station, screen, oldPlayer=None):
     self.station = station
     self.screen = screen
     self.oldPlayer = oldPlayer
@@ -484,6 +488,7 @@ class GstPlayer(object):
     else:
       self.player.set_state(Gst.State.PLAYING)
 
+
 class Player(object):
   player = None
   stop_tune = True
@@ -514,7 +519,7 @@ class Player(object):
       self.screen.slide_stop = True
     else:
       self.screen.slide_stop = False
-      Thread(target = self.slide_run).start()
+      Thread(target=self.slide_run).start()
 
   def slide_run(self):
     for i in self.screen.stations:
@@ -542,13 +547,16 @@ class Player(object):
     else:
       self.tune(keys[0])
 
+
 class StationKeyError(Exception):
   pass
+
 
 class ScreenSizeError(Exception):
   pass
 
-def cur_main(screen, loop, update = 30, station = None):
+
+def cur_main(screen, loop, update=30, station=None):
   socket.setdefaulttimeout(5)
   curses.curs_set(0)
   curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
@@ -585,6 +593,7 @@ def cur_main(screen, loop, update = 30, station = None):
     elif key == curses.KEY_DOWN:
       plr.next()
 
+
 def grab(station, update):
   stations = Stations()
   if station[0] == 'all':
@@ -601,6 +610,7 @@ def grab(station, update):
       sleep(update)
     except KeyboardInterrupt:
       break
+
 
 def main():
   parser = OptionParser()
@@ -620,11 +630,12 @@ def main():
       GObject.threads_init()
       Gst.init(None)
       loop = GObject.MainLoop()
-      Thread(target = curses.wrapper, args = (cur_main, loop, options.update, options.station)).start()
+      Thread(target=curses.wrapper, args=(cur_main, loop, options.update, options.station)).start()
       loop.run()
     except (ScreenSizeError, StationKeyError), e:
       print e
       exit(2)
+
 
 if __name__ == '__main__':
   main()
