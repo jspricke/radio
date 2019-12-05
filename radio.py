@@ -316,7 +316,7 @@ class Screen(object):
             self.screen.addstr('slide')
         else:
             self.screen.addstr('slide', curses.color_pair(2))
-        self.screen.addstr(', S: stop, space: pause, Q: quit, up/down: next/prev')
+        self.screen.addstr(', S: stop, space: pause, Q: quit, up/down: next/prev, left/right: seek')
         self.screen.refresh()
 
 
@@ -369,6 +369,18 @@ class GstPlayer(object):
         else:
             self.player.set_state(Gst.State.PLAYING)
 
+    def rewind(self):
+        rc, pos_int = self.player.query_position(Gst.Format.TIME)
+        seek_ns = pos_int - 100 * 1000000000
+        if seek_ns < 0:
+            seek_ns = 0
+        self.player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
+
+    def forward(self):
+        rc, pos_int = self.player.query_position(Gst.Format.TIME)
+        seek_ns = pos_int + 100 * 1000000000
+        self.player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
+
 
 class Player(object):
     player = None
@@ -394,6 +406,12 @@ class Player(object):
 
     def pause(self):
         self.player.pause()
+
+    def rewind(self):
+        self.player.rewind()
+
+    def forward(self):
+        self.player.forward()
 
     def slide(self):
         if not self.screen.slide_stop:
@@ -471,6 +489,10 @@ def cur_main(screen, loop, update=30, station=None):
             plr.pref()
         elif key == curses.KEY_DOWN:
             plr.next()
+        elif key == curses.KEY_LEFT:
+            plr.rewind()
+        elif key == curses.KEY_RIGHT:
+            plr.forward()
 
 
 def grab(station, update):
