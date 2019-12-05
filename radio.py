@@ -306,7 +306,7 @@ class Screen(object):
         color = 0
       self.screen.addstr(x, 0, i + ': ')
       self.screen.addstr(self.stations[i].name, curses.color_pair(color))
-      self.screen.addstr(x, 21, self.stations[i].akt)
+      self.screen.addstr(x, 21, self.stations[i].akt[:100])
       x += 1
     if not self.akt:
       print('\033]0;Radio\007')
