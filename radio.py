@@ -22,7 +22,7 @@ from sys import exit
 from re import search, findall, sub
 import gi
 gi.require_version('Gst', '1.0')
-from gi.repository import GObject, Gst
+from gi.repository import GLib, Gst
 
 
 class Station(object):
@@ -506,9 +506,8 @@ def main():
     if not options.update:
       options.update = 30
     try:
-      GObject.threads_init()
       Gst.init(None)
-      loop = GObject.MainLoop()
+      loop = GLib.MainLoop()
       Thread(target=curses.wrapper, args=(cur_main, loop, options.update, options.station)).start()
       loop.run()
     except (ScreenSizeError, StationKeyError) as e:
