@@ -138,6 +138,11 @@ class Station(object):
 class Stations(dict):
     def __init__(self):
         dict.__init__(self)
+        self.header = [
+            ' _',
+            '|_)  _   _| o  _',
+            '| \\ (_| (_| | (_)',
+        ]
 
         def bremenvier(self):
             text = self.getsitere('http://www.radiobremen.de/bremenvier/includes/mediabox.inc.php?c=onair',
@@ -290,12 +295,10 @@ class Screen(object):
             raise ScreenSizeError('Please resize your terminal to at least %d lines' % (7 + len(self.stations)))
         self.screen.clear()
         x = 0
-        self.screen.addstr(x, 16, ' _', curses.color_pair(3))
+        for line in self.stations.header:
+            self.screen.addstr(x, 16, line, curses.color_pair(3))
+            x += 1
         x += 1
-        self.screen.addstr(x, 16, '|_)  _   _| o  _', curses.color_pair(3))
-        x += 1
-        self.screen.addstr(x, 16, '| \ (_| (_| | (_)', curses.color_pair(3))
-        x += 2
         for i in self.stations:
             if i == self.akt:
                 color = 1
