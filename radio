@@ -126,6 +126,9 @@ class Radio(Stations):
         self['y'] = Station('N-Joy', 'https://ndr-njoy-live.sslcast.addradio.de/ndr/njoy/live/mp3/128/stream.mp3')
         self['z'] = Station('Radio Swiss Jazz', 'http://www.radioswissjazz.ch/live/mp3.m3u')
 
+    def get_text(self, i, now):
+        return self[i].akt
+
 
 if __name__ == '__main__':
     main(Radio())

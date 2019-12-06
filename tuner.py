@@ -17,6 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Python library to stream media"""
 
+from datetime import datetime
+from dateutil import tz
 from argparse import ArgumentParser
 from re import findall, search, sub
 from sys import exit
@@ -31,9 +33,12 @@ from gi.repository import GLib, Gst
 
 
 class Station:
-    def __init__(self, name, url, title=None):
+    def __init__(self, name, url, title=None, sname=None):
         self.name = name
+        self.sname = sname
         self.url = url
+        self.startTime = 0
+        self.endTime = 0
         self.title = title
         self.akt = ''
 
@@ -122,6 +127,8 @@ class Station:
         """ workaround for playlists"""
         if self.url.endswith('mp3'):
             return self.url
+        if self.url.endswith('m3u8'):
+            return self.url
         if self.url.endswith('listen'):    # for jazzradio
             return self.url
         if self.url.endswith('einws'):    # bbc
@@ -202,6 +209,9 @@ class Screen:
             self.screen.addstr(x, center, line, curses.color_pair(3))
             x += 1
         x += 1
+
+        now = datetime.now(tz.tzlocal())
+        max_station = max([len(st.name) for st in self.stations.values()])
         for i in self.stations:
             if i == self.akt:
                 color = 1
@@ -212,7 +222,7 @@ class Screen:
                 color = 0
             self.screen.addstr(x, 0, i + ': ')
             self.screen.addstr(self.stations[i].name, curses.color_pair(color))
-            self.screen.addstr(x, 21, self.stations[i].akt[:100])
+            self.screen.addstr(x, max_station + 4, self.stations.get_text(i, now)[:100])
             x += 1
         if not self.akt:
             print(f'\033]0;{type(self.stations).__name__}\007')

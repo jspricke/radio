@@ -1,0 +1,61 @@
+#!/usr/bin/python3
+#
+# Python TV streamer
+#
+# Copyright (C) 2019-11-23  Jochen Sprickerhof
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Python TV streamer"""
+
+from tuner import Station, Stations, main
+from urllib.request import urlopen
+import json
+from datetime import datetime
+from dateutil import tz
+
+
+class TV(Stations):
+    def __init__(self):
+        self.header = [
+            ' _______     __',
+            '|_   _\\ \\   / /',
+            '  | |  \\ \\ / /',
+            '  | |   \\ V /',
+            '  |_|    \\_/',
+        ]
+
+        def zapp(self):
+            shows = json.load(urlopen(f'https://zappbackend.herokuapp.com/v1/shows/{self.sname}'))
+            to_zone = tz.tzlocal()
+            if 'shows' in shows and 'startTime' in shows['shows'][0]:
+                self.startTime = datetime.strptime(shows['shows'][0]['startTime'], '%Y-%m-%dT%H:%M:%S.%f%z').astimezone(to_zone)
+                self.endTime = datetime.strptime(shows['shows'][0]['endTime'], '%Y-%m-%dT%H:%M:%S.%f%z').astimezone(to_zone)
+                return shows['shows'][0]['title']
+            return ''
+
+        channels = json.load(urlopen('https://raw.githubusercontent.com/mediathekview/zapp/master/app/src/main/res/raw/channels.json'))
+        for i, channel in enumerate(channels):
+            offset = ord('1') if i < 9 else ord('a') - 9
+            self[f'{chr(offset + i)}'] = Station(channel['name'], channel['stream_url'], zapp, channel['id'])
+
+    def get_text(self, i, now):
+        if self[i].endTime != 0:
+            percent = (now - self[i].startTime) / (self[i].endTime - self[i].startTime) * 100
+            if percent > 0:
+                return f'{percent:3.0f}% - {self[i].endTime:%H:%M} - {self[i].akt}'
+        return ''
+
+
+if __name__ == '__main__':
+    main(TV())
