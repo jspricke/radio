@@ -1,5 +1,4 @@
-#!/usr/bin/python3
-# Python radio streamer
+# Python library to stream media
 #
 # Copyright (C) 2008-03-17  Jochen Sprickerhof
 # Copyright (C) 2008-2019  Jochen Sprickerhof
@@ -16,7 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Python radio streamer"""
+"""Python library to stream media"""
 
 from argparse import ArgumentParser
 from re import findall, search, sub
@@ -142,107 +141,6 @@ class Station:
 
 
 class Stations(dict):
-    def __init__(self):
-        self.header = [
-            ' _',
-            '|_)  _   _| o  _',
-            '| \\ (_| (_| | (_)',
-        ]
-
-        def bremenvier(self):
-            text = self.getsitere('http://www.radiobremen.de/bremenvier/includes/mediabox.inc.php?c=onair',
-                                  r'<sendung>(.*)</sendung>(?:.|\s)*<jetzt>(.*): (.*)</jetzt>')
-            if not text:
-                return ''
-            return self.del_comma(text[1]) + ' - ' + text[2] + ' (' + text[0] + ')'
-
-        def einslive(self):
-            text = self.getsitere('http://www.einslive.de/radiotext/RADIOTXT.TXT')
-            if not text:
-                return ''
-            einsliveDict = {
-                'Ihr hoert': '',
-                'mit 1LIVE': '',
-                '1LIVE': '',
-                '1live': '',
-                '&#x0022;': '"',
-                ':': '-',
-                '*': '',
-                'mit': '-',
-            }
-            text = self.replaceDict(text, einsliveDict)
-            if text.count('"') == 1:
-                text = text.replace('- "', ' - ')
-                text = text.replace('"', '')
-            elif text.count('"') > 1:
-                title = text[text.find('"') + 1:text.rfind('"')]
-                interpret = text[:text.find('"')] + text[text.rfind('"') + 1:]
-                interpret = interpret.replace('-', '')
-                text = interpret + ' - ' + title
-            return text
-
-        def deutschlandfunk(self):
-            text = self.getsitere('http://www.deutschlandradio.de/jetzt-im-radio.261.de.html', r'Deutschlandfunk.*(?:<[^>]*>){7}[^<]*(?:<[^>]*>){5}([^<]*)(?:<[^>]*>){5}([^<]*)')
-            if not text:
-                return ''
-            return text[0] + ' - ' + text[1]
-
-        def dradio(self):
-            text = self.getsitere('http://www.deutschlandradio.de/jetzt-im-radio.261.de.html', r'Deutschlandfunk Kultur.*(?:<[^>]*>){7}[^<]*(?:<[^>]*>){5}([^<]*)(?:<[^>]*>){5}([^<]*)')
-            if not text:
-                return ''
-            return text[0] + ' - ' + text[1]
-
-        def lounge_radio(self):
-            text = self.getsitere('http://www.lounge-radio.com/code/pushed_files/now.html',
-                                  r'Artist:.*\n.*<div>(.*)</div>.*\n(?:.*\n){2}.*Track:.*\n.*<div>(.*)</div>')
-            if not text:
-                return ''
-            return text[0] + ' - ' + text[1]
-
-        def bremenzwei(self):
-            text = self.getsitere('http://www.radiobremen.de/extranet/playlist/nowplaying_nwr.xml',
-                                  r'<strong>(.*)</strong>.*\n.*Titel: "(.*)"<br />\nVon: (.*)</p>|<strong>(.*)</strong>')
-            if not text:
-                return ''
-            if text[0]:
-                return text[1] + ' - ' + self.del_comma(text[2]) + ' (' + text[0] + ')'
-            return text[3]
-
-        def tsf_jazz(self):
-            text = self.getsitere('http://www.tsfjazz.com/getSongInformations.php')
-            if not text:
-                return ''
-            text = text.replace('|', ' - ')
-            return text
-
-        self['a'] = Station('Byte.fm', 'http://www.byte.fm/stream/bytefm.m3u')
-        self['b'] = Station('Bremen 4', 'http://httpmedia.radiobremen.de/bremenvier.m3u', bremenvier)
-        self['c'] = Station('Cosmo', 'https://wdr-cosmo-live.icecastssl.wdr.de/wdr/cosmo/live/mp3/128/stream.mp3')
-        self['d'] = Station('Deutschlandfunk', 'http://www.dradio.de/streaming/dlf_hq_ogg.m3u', deutschlandfunk)
-        self['e'] = Station('1 Live', 'http://www.wdr.de/wdrlive/media/einslive.m3u', einslive)
-        self['f'] = Station('Dfunk Nova', 'http://st03.dlf.de/dlf/03/128/mp3/stream.mp3')
-        self['g'] = Station('Das Ding', 'http://mp3-live.dasding.de/dasding_m.m3u')
-        self['h'] = Station('Fritz', 'https://rbb-fritz-live.sslcast.addradio.de/rbb/fritz/live/mp3/128/stream.mp3')
-        self['i'] = Station('NDR Info', 'http://www.ndr.de/resources/metadaten/audio/m3u/ndrinfo.m3u')
-        self['j'] = Station('Jazzradio', 'https://streaming.radio.co/s774887f7b/listen')
-        self['k'] = Station('Dradio Kultur', 'http://www.dradio.de/streaming/dkultur_hq_ogg.m3u', dradio)
-        self['l'] = Station('1 Live diggi', 'http://www.wdr.de/wdrlive/media/einslivedigi.m3u')
-        self['m'] = Station('Smooth Jazz', 'http://smoothjazz.com/streams/smoothjazz_128.pls')
-        self['n'] = Station('Bremen Zwei', 'http://dl-ondemand.radiobremen.de/bremenzwei.m3u', bremenzwei)
-        self['o'] = Station('Groove FM', 'http://stream.groovefm.de:10028/listen.pls')
-        self['p'] = Station('Radio Swiss Pop', 'http://www.radioswisspop.ch/live/mp3.m3u')
-        self['q'] = Station('Bremen Zwei Sounds', 'http://webchannel.radiobremen.de:8000/bremenzwei-sounds.m3u')
-        self['r'] = Station('Swiss Radio Jazz', 'http://relay.publicdomainproject.org/modern_jazz.aac.m3u')
-        self['s'] = Station('NDR Blue', 'http://www.ndr.de/resources/metadaten/audio/m3u/ndrblue.m3u')
-        self['t'] = Station('TSF Jazz', 'http://statslive.infomaniak.ch/playlist/tsfjazz/tsfjazz-high.mp3/playlist.pls', tsf_jazz)
-        self['u'] = Station('BBC World Service', 'http://bbcwssc.ic.llnwd.net/stream/bbcwssc_mp1_ws-einws')
-        self['v'] = Station('Lounge Radio', 'http://www.lounge-radio.com/listen128.m3u', lounge_radio)
-        self['w'] = Station('WDR 5', 'http://www.wdr.de/wdrlive/media/wdr5.m3u')
-        self['x'] = Station('Swiss Groove', 'http://swissgroove.com/listen.php?player=pls')
-        self['y'] = Station('N-Joy', 'https://ndr-njoy-live.sslcast.addradio.de/ndr/njoy/live/mp3/128/stream.mp3')
-        self['z'] = Station('Radio Swiss Jazz', 'http://www.radioswissjazz.ch/live/mp3.m3u')
-
     def keys(self):
         return sorted(dict.keys(self))
 
@@ -275,11 +173,11 @@ class Screen:
 
     slide_stop = property(get_slide_stop, set_slide_stop)
 
-    def __init__(self, screen, update):
+    def __init__(self, screen, update, stations):
         self.__akt = None
         self.__next = None
         self.__slide_stop = True
-        self.stations = Stations()
+        self.stations = stations
         self.screen = screen
         self.update = update
         thread = Thread(target=self.grabber)
@@ -317,7 +215,7 @@ class Screen:
             self.screen.addstr(x, 21, self.stations[i].akt[:100])
             x += 1
         if not self.akt:
-            print('\033]0;Radio\007')
+            print(f'\033]0;{type(self.stations).__name__}\007')
         x += 1
         self.screen.addstr(x, 0, 'R: redraw, T: ')
         if self.slide_stop:
@@ -391,10 +289,10 @@ class GstPlayer:
 
 
 class Player:
-    def __init__(self, scr, update):
+    def __init__(self, scr, update, stations):
         self.player = None
         self.stop_tune = True
-        self.screen = Screen(scr, update)
+        self.screen = Screen(scr, update, stations)
 
     def stop(self):
         if self.player:
@@ -462,13 +360,13 @@ class ScreenSizeError(Exception):
     pass
 
 
-def cur_main(screen, loop, update=30, station=None):
+def cur_main(screen, loop, stations, update=30, station=None):
     socket.setdefaulttimeout(5)
     curses.curs_set(0)
     curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-    plr = Player(screen, update)
+    plr = Player(screen, update, stations)
 
     if station:
         if station in plr.screen.stations:
@@ -502,8 +400,7 @@ def cur_main(screen, loop, update=30, station=None):
             plr.forward()
 
 
-def grab(station, update):
-    stations = Stations()
+def grab(station, update, stations):
     if station[0] == 'all':
         station = stations.keys()
 
@@ -520,7 +417,7 @@ def grab(station, update):
             break
 
 
-def main():
+def main(stations):
     parser = ArgumentParser()
     parser.add_argument('-g', '--grabber', metavar='stationkey[,..]',
                         help='mode to test grabber function of a station (all for all stations)')
@@ -533,19 +430,16 @@ def main():
     if options.grabber:
         if not options.update:
             options.update = 2
-        grab(options.grabber.split(','), options.update)
+        grab(options.grabber.split(','), options.update, stations)
     else:
         if not options.update:
             options.update = 30
         try:
             Gst.init(None)
             loop = GLib.MainLoop()
-            Thread(target=curses.wrapper, args=(cur_main, loop, options.update, options.station)).start()
+            Thread(target=curses.wrapper, args=(cur_main, loop, stations,
+                                                options.update, options.station)).start()
             loop.run()
         except (ScreenSizeError, StationKeyError) as e:
             print(e)
             exit(2)
-
-
-if __name__ == '__main__':
-    main()
