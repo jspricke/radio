@@ -12,7 +12,7 @@
 # (c) 2008-03-17 Jochen Sprickerhof <jochen at sprickerhof.de>
 # (c) 2008-2018 Jochen Sprickerhof <jochen at sprickerhof.de>
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 import curses
 from threading import Thread
 from time import sleep
@@ -517,11 +517,14 @@ def grab(station, update):
 
 
 def main():
-    parser = OptionParser()
-    parser.add_option('-g', '--grabber', metavar='stationkey[,..]', help='mode to test grabber function of a station (all for all stations)')
-    parser.add_option('-s', '--station', metavar='stationkey', help='Station to start with')
-    parser.add_option('-u', '--update', type='float', metavar='time', help='update intervall for grabber function')
-    (options, args) = parser.parse_args()
+    parser = ArgumentParser()
+    parser.add_argument('-g', '--grabber', metavar='stationkey[,..]',
+                        help='mode to test grabber function of a station (all for all stations)')
+    parser.add_argument('-s', '--station', metavar='stationkey',
+                        help='Station to start with')
+    parser.add_argument('-u', '--update', type=float, metavar='time',
+                        help='update intervall for grabber function')
+    options = parser.parse_args()
 
     if options.grabber:
         if not options.update:
