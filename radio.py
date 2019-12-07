@@ -1,16 +1,22 @@
 #!/usr/bin/python3
+# Python radio streamer
 #
-# Web Radio Station Tuner
-# - seamless playing
-# - greps song names from the net
+# Copyright (C) 2008-03-17  Jochen Sprickerhof
+# Copyright (C) 2008-2019  Jochen Sprickerhof
 #
-# dependencies:
-# aptitude install python3-gi gir1.2-gst-plugins-base-1.0 gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-alsa
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-# http://jochen.sprickerhof.de/software/radio
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
-# (c) 2008-03-17 Jochen Sprickerhof <jochen at sprickerhof.de>
-# (c) 2008-2018 Jochen Sprickerhof <jochen at sprickerhof.de>
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Python radio streamer"""
 
 from argparse import ArgumentParser
 from re import findall, search, sub
