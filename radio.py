@@ -137,7 +137,6 @@ class Station:
 
 class Stations(dict):
     def __init__(self):
-        dict.__init__(self)
         self.header = [
             ' _',
             '|_)  _   _| o  _',
@@ -243,11 +242,6 @@ class Stations(dict):
 
 
 class Screen:
-    __akt = None
-    __next = None
-    __slide_stop = True
-    stations = Stations()
-
     def get_akt(self):
         return self.__akt
 
@@ -276,6 +270,10 @@ class Screen:
     slide_stop = property(get_slide_stop, set_slide_stop)
 
     def __init__(self, screen, update):
+        self.__akt = None
+        self.__next = None
+        self.__slide_stop = True
+        self.stations = Stations()
         self.screen = screen
         self.update = update
         thread = Thread(target=self.grabber)
@@ -386,10 +384,9 @@ class GstPlayer:
 
 
 class Player:
-    player = None
-    stop_tune = True
-
     def __init__(self, scr, update):
+        self.player = None
+        self.stop_tune = True
         self.screen = Screen(scr, update)
 
     def stop(self):
