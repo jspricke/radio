@@ -293,8 +293,9 @@ class Screen:
             raise ScreenSizeError('Please resize your terminal to at least %d lines' % (7 + len(self.stations)))
         self.screen.clear()
         x = 0
+        center = (cols - max([len(l) for l in self.stations.header])) // 2
         for line in self.stations.header:
-            self.screen.addstr(x, 16, line, curses.color_pair(3))
+            self.screen.addstr(x, center, line, curses.color_pair(3))
             x += 1
         x += 1
         for i in self.stations:
