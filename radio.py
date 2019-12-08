@@ -13,14 +13,14 @@
 # (c) 2008-2018 Jochen Sprickerhof <jochen at sprickerhof.de>
 
 from argparse import ArgumentParser
-import curses
+from re import findall, search, sub
+from sys import exit
 from threading import Thread
 from time import sleep
 from urllib.request import urlopen
-import socket
-from sys import exit
-from re import search, findall, sub
+import curses
 import gi
+import socket
 gi.require_version('Gst', '1.0')
 from gi.repository import GLib, Gst
 
