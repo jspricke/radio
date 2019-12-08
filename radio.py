@@ -25,7 +25,7 @@ gi.require_version('Gst', '1.0')
 from gi.repository import GLib, Gst
 
 
-class Station(object):
+class Station:
     def __init__(self, name, url, title=None):
         self.name = name
         self.url = url
@@ -242,7 +242,7 @@ class Stations(dict):
         return sorted(dict.keys(self))
 
 
-class Screen(object):
+class Screen:
     __akt = None
     __next = None
     __slide_stop = True
@@ -323,7 +323,7 @@ class Screen(object):
         self.screen.refresh()
 
 
-class GstPlayer(object):
+class GstPlayer:
     def __init__(self, station, screen, oldPlayer=None):
         self.station = station
         self.screen = screen
@@ -385,7 +385,7 @@ class GstPlayer(object):
         self.player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
 
 
-class Player(object):
+class Player:
     player = None
     stop_tune = True
 
