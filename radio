@@ -115,7 +115,7 @@ class Radio(Stations):
         self['o'] = Station('Groove FM', 'http://stream.groovefm.de:10028/listen.pls')
         self['p'] = Station('Radio Swiss Pop', 'http://www.radioswisspop.ch/live/mp3.m3u')
         self['q'] = Station('Bremen Zwei Sounds', 'http://webchannel.radiobremen.de:8000/bremenzwei-sounds.m3u')
-        self['r'] = Station('Swiss Radio Jazz', 'http://relay.publicdomainproject.org/modern_jazz.aac.m3u')
+        self['r'] = Station('Swiss Radio Jazz', 'http://relay.publicdomainproject.org/jazz_swing.aac.m3u')
         self['s'] = Station('NDR Blue', 'http://www.ndr.de/resources/metadaten/audio/m3u/ndrblue.m3u')
         self['t'] = Station('TSF Jazz', 'http://statslive.infomaniak.ch/playlist/tsfjazz/tsfjazz-high.mp3/playlist.pls', tsf_jazz)
         self['u'] = Station('BBC World Service', 'http://bbcwssc.ic.llnwd.net/stream/bbcwssc_mp1_ws-einws')
