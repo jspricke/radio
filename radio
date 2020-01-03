@@ -63,14 +63,14 @@ class Radio(Stations):
             return text
 
         def deutschlandfunk(self):
-            text = self.getsitere('http://www.deutschlandradio.de/jetzt-im-radio.261.de.html',
+            text = self.getsitere('https://www.deutschlandfunk.de/jetzt-im-radio.1852.de.html',
                                   r'Deutschlandfunk.*(?:<[^>]*>){7}[^<]*(?:<[^>]*>){5}([^<]*)(?:<[^>]*>){5}([^<]*)')
             if not text:
                 return ''
             return text[0] + ' - ' + text[1]
 
         def dradio(self):
-            text = self.getsitere('http://www.deutschlandradio.de/jetzt-im-radio.261.de.html',
+            text = self.getsitere('https://www.deutschlandfunkkultur.de/jetzt-im-radio.1851.de.html',
                                   r'Deutschlandfunk Kultur.*(?:<[^>]*>){7}[^<]*(?:<[^>]*>){5}([^<]*)(?:<[^>]*>){5}([^<]*)')
             if not text:
                 return ''
