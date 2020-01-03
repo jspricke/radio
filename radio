@@ -112,7 +112,7 @@ class Radio(Stations):
         self['l'] = Station('1 Live diggi', 'http://www.wdr.de/wdrlive/media/einslivedigi.m3u')
         self['m'] = Station('Smooth Jazz', 'http://smoothjazz.com/streams/smoothjazz_128.pls')
         self['n'] = Station('Bremen Zwei', 'http://dl-ondemand.radiobremen.de/bremenzwei.m3u', bremenzwei)
-        self['o'] = Station('Groove FM', 'http://stream.groovefm.de:10028/listen.pls')
+        self['o'] = Station('Groove FM', 'http://stream.laut.fm/groovefm')
         self['p'] = Station('Radio Swiss Pop', 'http://www.radioswisspop.ch/live/mp3.m3u')
         self['q'] = Station('Bremen Zwei Sounds', 'http://webchannel.radiobremen.de:8000/bremenzwei-sounds.m3u')
         self['r'] = Station('Swiss Radio Jazz', 'http://relay.publicdomainproject.org/jazz_swing.aac.m3u')

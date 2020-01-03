@@ -139,6 +139,8 @@ class Station:
             return self.url
         if self.url.endswith('listen'):    # for jazzradio
             return self.url
+        if self.url.endswith('groovefm'):
+            return self.url
         if self.url.endswith('einws'):    # bbc
             return self.url
         try:
