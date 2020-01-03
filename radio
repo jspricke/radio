@@ -93,11 +93,10 @@ class Radio(Stations):
             return text[3]
 
         def tsf_jazz(self):
-            text = self.getsitere('http://www.tsfjazz.com/getSongInformations.php')
-            if not text:
-                return ''
-            text = text.replace('|', ' - ')
-            return text
+            js = self.getjson('https://api.tsfjazz.com/api/tracklists/current/TSF?radio=TSF')
+            artist = js['artist']
+            title = js['title']
+            return f'{artist} - {title}'
 
         self['a'] = Station('Byte.fm', 'http://www.byte.fm/stream/bytefm.m3u')
         self['b'] = Station('Bremen 4', 'http://httpmedia.radiobremen.de/bremenvier.m3u', bremenvier)
