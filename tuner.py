@@ -20,6 +20,7 @@
 from datetime import datetime
 from dateutil import tz
 from argparse import ArgumentParser
+from json import load
 from re import findall, search, sub
 from sys import exit
 from threading import Thread
@@ -118,6 +119,13 @@ class Station:
         if not found:
             return None
         return found.groups()
+
+    @staticmethod
+    def getjson(url):
+        try:
+            return load(urlopen(url))
+        except (Exception, socket.error):
+            return None
 
     def update(self):
         if self.title:
