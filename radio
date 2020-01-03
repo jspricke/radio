@@ -84,8 +84,8 @@ class Radio(Stations):
             return text[0] + ' - ' + text[1]
 
         def bremenzwei(self):
-            text = self.getsitere('http://www.radiobremen.de/extranet/playlist/nowplaying_nwr.xml',
-                                  r'<strong>(.*)</strong>.*\n.*Titel: "(.*)"<br />\nVon: (.*)</p>|<strong>(.*)</strong>')
+            text = self.getsitere('https://www.radiobremen.de/extranet/playlist/nowplaying_rb2.xml',
+                                  r'<strong>(.*)</strong>.*\n.*\nTitel: (.*)<br />\nVon: (.*)|<strong>(.*)</strong>')
             if not text:
                 return ''
             if text[0]:
