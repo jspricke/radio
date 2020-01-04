@@ -94,6 +94,8 @@ class Radio(Stations):
 
         def tsf_jazz(self):
             js = self.getjson('https://api.tsfjazz.com/api/tracklists/current/TSF?radio=TSF')
+            if not js:
+                return ''
             artist = js['artist']
             title = js['title']
             return f'{artist} - {title}'
