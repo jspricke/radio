@@ -42,10 +42,10 @@ class TV(Stations):
                 return shows['shows'][0]['title']
             return ''
 
-        channels = Station.getjson('https://raw.githubusercontent.com/mediathekview/zapp/master/app/src/main/res/raw/channels.json')
+        channels = Station.getjson('https://zappbackend.herokuapp.com/v1/channelInfoList')
         for i, channel in enumerate(channels):
             offset = ord('1') if i < 9 else ord('a') - 9
-            self[f'{chr(offset + i)}'] = Station(channel['name'], channel['stream_url'], zapp, channel['id'])
+            self[f'{chr(offset + i)}'] = Station(channels[channel]['name'], channels[channel]['streamUrl'], zapp, channel)
 
     def get_text(self, i, now):
         if self[i].endTime != 0:
