@@ -133,6 +133,8 @@ class Station:
 
     def get_url(self):
         """ workaround for playlists"""
+        if self.url.endswith('aac'):
+            return self.url
         if self.url.endswith('mp3'):
             return self.url
         if self.url.endswith('m3u8'):
