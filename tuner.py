@@ -244,7 +244,7 @@ class Screen:
             self.screen.addstr('slide')
         else:
             self.screen.addstr('slide', curses.color_pair(2))
-        self.screen.addstr(', S: stop, space: pause, Q: quit, up/down: next/prev, left/right: seek')
+        self.screen.addstr(', S: stop, space: pause, B: beginning, Q: quit, up/down: next/prev, left/right: seek')
         self.screen.refresh()
 
 
@@ -297,16 +297,14 @@ class GstPlayer:
         else:
             self.player.set_state(Gst.State.PLAYING)
 
-    def rewind(self):
-        rc, pos_int = self.player.query_position(Gst.Format.TIME)
-        seek_ns = pos_int - 100 * 1000000000
+    def seek(self, sec):
+        if sec == 0 and self.station.startTime != 0:
+            now = datetime.now(tz.tzlocal())
+            sec = (now - self.station.startTime).seconds
+        pos_int = self.player.query_position(Gst.Format.TIME)[1]
+        seek_ns = pos_int - sec * 1E9
         if seek_ns < 0:
             seek_ns = 0
-        self.player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
-
-    def forward(self):
-        rc, pos_int = self.player.query_position(Gst.Format.TIME)
-        seek_ns = pos_int + 100 * 1000000000
         self.player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
 
 
@@ -334,11 +332,8 @@ class Player:
     def pause(self):
         self.player.pause()
 
-    def rewind(self):
-        self.player.rewind()
-
-    def forward(self):
-        self.player.forward()
+    def seek(self, sec):
+        self.player.seek(sec)
 
     def slide(self):
         if not self.screen.slide_stop:
@@ -398,7 +393,9 @@ def cur_main(screen, loop, stations, update=30, station=None):
 
     while True:
         key = screen.get_wch()
-        if key == 'Q':
+        if key == 'B':
+            plr.seek(0)
+        elif key == 'Q':
             screen.clear()
             loop.quit()
             break
@@ -417,9 +414,9 @@ def cur_main(screen, loop, stations, update=30, station=None):
         elif key == curses.KEY_DOWN:
             plr.next()
         elif key == curses.KEY_LEFT:
-            plr.rewind()
+            plr.seek(10)
         elif key == curses.KEY_RIGHT:
-            plr.forward()
+            plr.seek(-10)
 
 
 def grab(station, update, stations):
