@@ -48,7 +48,7 @@ class TV(Stations):
             self[f'{chr(offset + i)}'] = Station(channels[channel]['name'], channels[channel]['streamUrl'], zapp, channel)
 
     def get_text(self, i, now):
-        if self[i].endTime != 0:
+        if self[i].endTime != self[i].startTime:
             percent = (now - self[i].startTime) / (self[i].endTime - self[i].startTime) * 100
             if percent > 0:
                 return f'{percent:3.0f}% - {self[i].endTime:%H:%M} - {self[i].akt}'
