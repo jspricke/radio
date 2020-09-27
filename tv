@@ -19,8 +19,10 @@
 """Python TV streamer"""
 
 from tuner import Station, Stations, main
+from atexit import register
 from datetime import datetime
 from dateutil import tz
+from subprocess import run
 
 
 class TV(Stations):
@@ -55,5 +57,13 @@ class TV(Stations):
         return ''
 
 
+def exit_handler():
+    run(['xset', '+dpms'])
+    run(['xset', 's', 'on'])
+
+
 if __name__ == '__main__':
+    run(['xset', '-dpms'])
+    run(['xset', 's', 'off'])
+    register(exit_handler)
     main(TV())
