@@ -257,6 +257,7 @@ class GstPlayer:
         self.player = Gst.ElementFactory.make('playbin', None)
         bus = self.player.get_bus()
         bus.add_signal_watch()
+        bus.connect('message::buffering', self.on_buffering)
         bus.connect('message::eos', self.on_eos)
         bus.connect('message::error', self.on_error)
         bus.connect('message::state-changed', self.on_state_changed)
@@ -265,6 +266,13 @@ class GstPlayer:
         url = self.station.get_url()
         if url:
             self.player.set_property('uri', url)
+            self.player.set_state(Gst.State.PAUSED)
+
+    def on_buffering(self, bus, message):
+        percent = message.parse_buffering()
+        if percent < 100 and self.player.get_state(Gst.CLOCK_TIME_NONE).state == Gst.State.PLAYING:
+            self.player.set_state(Gst.State.PAUSED)
+        elif percent == 100 and self.player.get_state(Gst.CLOCK_TIME_NONE).state == Gst.State.PAUSED:
             self.player.set_state(Gst.State.PLAYING)
 
     def on_eos(self, bus, message):
@@ -276,8 +284,9 @@ class GstPlayer:
     def on_state_changed(self, bus, message):
         old, new, pending = message.parse_state_changed()
         if message.src == self.player and new == Gst.State.PLAYING:
-            self.screen.akt = self.screen.next
-            self.screen.next = None
+            if self.screen.next:
+                self.screen.akt = self.screen.next
+                self.screen.next = None
             if self.oldPlayer:
                 self.oldPlayer.stop()
 
