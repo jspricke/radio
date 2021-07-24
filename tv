@@ -21,8 +21,8 @@
 from tuner import Station, Stations, main
 from atexit import register
 from datetime import datetime
-from dateutil import tz
 from subprocess import run
+from zoneinfo import ZoneInfo
 
 
 class TV(Stations):
@@ -36,7 +36,7 @@ class TV(Stations):
         ]
 
         def zapp(self):
-            to_zone = tz.tzlocal()
+            to_zone = ZoneInfo('localtime')
             shows = self.getjson(f'https://zappbackend.herokuapp.com/v1/shows/{self.sname}')
             if shows and 'shows' in shows and 'startTime' in shows['shows'][0]:
                 self.startTime = datetime.strptime(shows['shows'][0]['startTime'], '%Y-%m-%dT%H:%M:%S.%f%z').astimezone(to_zone)

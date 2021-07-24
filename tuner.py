@@ -18,7 +18,6 @@
 """Python library to stream media"""
 
 from datetime import datetime
-from dateutil import tz
 from argparse import ArgumentParser
 from json import load
 from re import findall, search, sub
@@ -26,6 +25,7 @@ from sys import exit
 from threading import Thread
 from time import sleep
 from urllib.request import urlopen
+from zoneinfo import ZoneInfo
 import curses
 import gi
 import socket
@@ -222,7 +222,7 @@ class Screen:
             x += 1
         x += 1
 
-        now = datetime.now(tz.tzlocal())
+        now = datetime.now(ZoneInfo('localtime'))
         max_station = max([len(st.name) for st in self.stations.values()])
         for i in self.stations:
             if i == self.akt:
@@ -308,7 +308,7 @@ class GstPlayer:
 
     def seek(self, sec):
         if sec == 0 and self.station.startTime != 0:
-            now = datetime.now(tz.tzlocal())
+            now = datetime.now(ZoneInfo('localtime'))
             sec = (now - self.station.startTime).seconds
         pos_int = self.player.query_position(Gst.Format.TIME)[1]
         seek_ns = pos_int - sec * 1E9
