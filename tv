@@ -45,6 +45,8 @@ class TV(Stations):
             return ''
 
         channels = Station.getjson('https://api.zapp.mediathekview.de/v1/channelInfoList')
+        if not channels:
+            print("Error getting channels")
         for i, channel in enumerate(channels):
             offset = ord('1') if i < 9 else ord('a') - 9
             self[f'{chr(offset + i)}'] = Station(channels[channel]['name'], channels[channel]['streamUrl'], zapp, channel)
