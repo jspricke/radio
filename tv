@@ -37,14 +37,14 @@ class TV(Stations):
 
         def zapp(self):
             to_zone = ZoneInfo('localtime')
-            shows = self.getjson(f'https://zappbackend.herokuapp.com/v1/shows/{self.sname}')
+            shows = self.getjson(f'https://api.zapp.mediathekview.de/v1/shows/{self.sname}')
             if shows and 'shows' in shows and 'startTime' in shows['shows'][0]:
                 self.startTime = datetime.strptime(shows['shows'][0]['startTime'], '%Y-%m-%dT%H:%M:%S.%f%z').astimezone(to_zone)
                 self.endTime = datetime.strptime(shows['shows'][0]['endTime'], '%Y-%m-%dT%H:%M:%S.%f%z').astimezone(to_zone)
                 return shows['shows'][0]['title']
             return ''
 
-        channels = Station.getjson('https://zappbackend.herokuapp.com/v1/channelInfoList')
+        channels = Station.getjson('https://api.zapp.mediathekview.de/v1/channelInfoList')
         for i, channel in enumerate(channels):
             offset = ord('1') if i < 9 else ord('a') - 9
             self[f'{chr(offset + i)}'] = Station(channels[channel]['name'], channels[channel]['streamUrl'], zapp, channel)
