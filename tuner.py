@@ -15,10 +15,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Python library to stream media"""
+"""Python library to stream media."""
 
-from datetime import datetime
+import curses
+import socket
 from argparse import ArgumentParser
+from datetime import datetime
 from json import load
 from re import findall, search, sub
 from sys import exit
@@ -26,10 +28,10 @@ from threading import Thread
 from time import sleep
 from urllib.request import urlopen
 from zoneinfo import ZoneInfo
-import curses
+
 import gi
-import socket
-gi.require_version('Gst', '1.0')
+
+gi.require_version("Gst", "1.0")
 from gi.repository import GLib, Gst
 
 
@@ -41,76 +43,76 @@ class Station:
         self.startTime = 0
         self.endTime = 0
         self.title = title
-        self.akt = ''
+        self.akt = ""
 
     htmlDict = {
-        '&auml;': 'ä',
-        '&Auml;': 'Ae',
-        '&ouml;': 'ö',
-        '&Ouml;': 'Oe',
-        '&uuml;': 'ü',
-        '&Uuml;': 'Ue',
-        '&szlig;': 'ß',
-        '&apos;': "'",
-        '&eacute;': "é",
-        '&#x27;': "'",
-        '&#39;': "'",
-        '&#039;': "'",
-        '&amp;': '&',
-        '&quot;': '"',
-        '&nbsp;': ' ',
-        '\t': ' ',
-        '\r': ' ',
-        '\n': ' ',
-        '\x00': ' ',
+        "&auml;": "ä",
+        "&Auml;": "Ae",
+        "&ouml;": "ö",
+        "&Ouml;": "Oe",
+        "&uuml;": "ü",
+        "&Uuml;": "Ue",
+        "&szlig;": "ß",
+        "&apos;": "'",
+        "&eacute;": "é",
+        "&#x27;": "'",
+        "&#39;": "'",
+        "&#039;": "'",
+        "&amp;": "&",
+        "&quot;": '"',
+        "&nbsp;": " ",
+        "\t": " ",
+        "\r": " ",
+        "\n": " ",
+        "\x00": " ",
     }
 
     @staticmethod
-    def replaceDict(string, dict=htmlDict):
-        for key in dict:
-            string = string.replace(key, dict[key])
+    def replaceDict(string, dct=htmlDict):
+        for key in dct:
+            string = string.replace(key, dct[key])
         return string
 
     @staticmethod
     def del_comma(string):
-        string = string.replace(', ', ',')
-        if ',' in string and '&' not in string and ';' not in string:
-            string = string[string.find(',') + 1:] + ' ' + string[:string.find(',')]
+        string = string.replace(", ", ",")
+        if "," in string and "&" not in string and ";" not in string:
+            string = string[string.find(",") + 1:] + " " + string[: string.find(",")]
         return string
 
     @staticmethod
     def caps(string):
-        list = string.split(' ')
+        lst = string.split(" ")
         newlist = []
-        for word in list:
+        for word in lst:
             if word.isupper():
                 newlist.append(word.capitalize())
             else:
                 newlist.append(word)
-        return ' '.join(newlist)
+        return " ".join(newlist)
 
     @classmethod
     def tunestring(cls, string):
-        if 'DOCTYPE' in string:
-            return ''
+        if "DOCTYPE" in string:
+            return ""
         string = cls.replaceDict(string)
         string = string.strip()
         string = string.rstrip()
-        string = sub('    +', ' ', string)
-        string = sub('<[^>]*>', '', string)
+        string = sub("    +", " ", string)
+        string = sub("<[^>]*>", "", string)
         string = cls.caps(string)
-        if string == '-':
-            return ''
-        if string.startswith('- '):
+        if string == "-":
+            return ""
+        if string.startswith("- "):
             string = string[2:]
-        if string.endswith(' -'):
+        if string.endswith(" -"):
             string = string[:-2]
         return string
 
     @staticmethod
     def getsitere(url, reg=None):
         try:
-            site = urlopen(url).read().decode('utf-8')    # limit read(100)
+            site = urlopen(url).read().decode("utf-8")  # limit read(100)
         except (Exception, socket.error):
             return None
         if not reg:
@@ -132,27 +134,27 @@ class Station:
             self.akt = self.tunestring(self.title(self))
 
     def get_url(self):
-        """ workaround for playlists"""
-        if self.url.endswith('aac'):
+        """Workaround for playlists."""
+        if self.url.endswith("aac"):
             return self.url
-        if self.url.endswith('mp3'):
+        if self.url.endswith("mp3"):
             return self.url
-        if self.url.endswith('m3u8'):
+        if self.url.endswith("m3u8"):
             return self.url
-        if self.url.endswith('listen'):    # for jazzradio
+        if self.url.endswith("listen"):  # for jazzradio
             return self.url
-        if self.url.endswith('groovefm'):
+        if self.url.endswith("groovefm"):
             return self.url
-        if self.url.endswith('einws'):    # bbc
+        if self.url.endswith("einws"):  # bbc
             return self.url
         try:
-            site = urlopen(self.url).read().decode('utf-8')    # read(100)!
+            site = urlopen(self.url).read().decode("utf-8")  # read(100)!
         except IOError:
             return None
-        if self.url.endswith('wax'):
+        if self.url.endswith("wax"):
             uris = findall('mms://[^ \r\n"]*', site)
         else:
-            uris = findall('http://[^ \r\n]*', site)
+            uris = findall("http://[^ \r\n]*", site)
         if uris:
             return uris[0]
         else:
@@ -177,11 +179,11 @@ class Screen:
     def get_next(self):
         return self.__next
 
-    def set_next(self, next):
-        self.__next = next
+    def set_next(self, nxt):
+        self.__next = nxt
         self.redraw()
 
-    next = property(get_next, set_next)
+    nxt = property(get_next, set_next)
 
     def get_slide_stop(self):
         return self.__slide_stop
@@ -212,39 +214,46 @@ class Screen:
 
     def redraw(self):
         line, cols = self.screen.getmaxyx()
-        if(line < 7 + len(self.stations)):
-            raise ScreenSizeError('Please resize your terminal to at least %d lines' % (7 + len(self.stations)))
+        if line < 7 + len(self.stations):
+            raise ScreenSizeError(
+                "Please resize your terminal to at least %d lines"
+                % (7 + len(self.stations))
+            )
         self.screen.clear()
         x = 0
-        center = (cols - max([len(l) for l in self.stations.header])) // 2
+        center = (cols - max([len(head) for head in self.stations.header])) // 2
         for line in self.stations.header:
             self.screen.addstr(x, center, line, curses.color_pair(3))
             x += 1
         x += 1
 
-        now = datetime.now(ZoneInfo('localtime'))
+        now = datetime.now(ZoneInfo("localtime"))
         max_station = max([len(st.name) for st in self.stations.values()])
         for i in self.stations:
             if i == self.akt:
                 color = 1
-                print('\033]0;%s: %s\007' % (self.stations[i].name, self.stations[i].akt))
-            elif i == self.next:
+                print(
+                    "\033]0;%s: %s\007" % (self.stations[i].name, self.stations[i].akt)
+                )
+            elif i == self.nxt:
                 color = 2
             else:
                 color = 0
-            self.screen.addstr(x, 0, i + ': ')
+            self.screen.addstr(x, 0, i + ": ")
             self.screen.addstr(self.stations[i].name, curses.color_pair(color))
             self.screen.addstr(x, max_station + 4, self.stations.get_text(i, now)[:100])
             x += 1
         if not self.akt:
-            print(f'\033]0;{type(self.stations).__name__}\007')
+            print(f"\033]0;{type(self.stations).__name__}\007")
         x += 1
-        self.screen.addstr(x, 0, 'R: redraw, T: ')
+        self.screen.addstr(x, 0, "R: redraw, T: ")
         if self.slide_stop:
-            self.screen.addstr('slide')
+            self.screen.addstr("slide")
         else:
-            self.screen.addstr('slide', curses.color_pair(2))
-        self.screen.addstr(', S: stop, space: pause, B: beginning, Q: quit, up/down: next/prev, left/right: seek')
+            self.screen.addstr("slide", curses.color_pair(2))
+        self.screen.addstr(
+            ", S: stop, space: pause, B: beginning, Q: quit, up/down: next/prev, left/right: seek"
+        )
         self.screen.refresh()
 
 
@@ -254,25 +263,31 @@ class GstPlayer:
         self.screen = screen
         self.oldPlayer = oldPlayer
 
-        self.player = Gst.ElementFactory.make('playbin', None)
+        self.player = Gst.ElementFactory.make("playbin", None)
         bus = self.player.get_bus()
         bus.add_signal_watch()
-        bus.connect('message::buffering', self.on_buffering)
-        bus.connect('message::eos', self.on_eos)
-        bus.connect('message::error', self.on_error)
-        bus.connect('message::state-changed', self.on_state_changed)
-        bus.connect('message::tag', self.on_tag)
+        bus.connect("message::buffering", self.on_buffering)
+        bus.connect("message::eos", self.on_eos)
+        bus.connect("message::error", self.on_error)
+        bus.connect("message::state-changed", self.on_state_changed)
+        bus.connect("message::tag", self.on_tag)
 
         url = self.station.get_url()
         if url:
-            self.player.set_property('uri', url)
+            self.player.set_property("uri", url)
             self.player.set_state(Gst.State.PAUSED)
 
     def on_buffering(self, bus, message):
         percent = message.parse_buffering()
-        if percent < 100 and self.player.get_state(Gst.CLOCK_TIME_NONE).state == Gst.State.PLAYING:
+        if (
+            percent < 100
+            and self.player.get_state(Gst.CLOCK_TIME_NONE).state == Gst.State.PLAYING
+        ):
             self.player.set_state(Gst.State.PAUSED)
-        elif percent == 100 and self.player.get_state(Gst.CLOCK_TIME_NONE).state == Gst.State.PAUSED:
+        elif (
+            percent == 100
+            and self.player.get_state(Gst.CLOCK_TIME_NONE).state == Gst.State.PAUSED
+        ):
             self.player.set_state(Gst.State.PLAYING)
 
     def on_eos(self, bus, message):
@@ -284,19 +299,19 @@ class GstPlayer:
     def on_state_changed(self, bus, message):
         old, new, pending = message.parse_state_changed()
         if message.src == self.player and new == Gst.State.PLAYING:
-            if self.screen.next:
-                self.screen.akt = self.screen.next
-                self.screen.next = None
+            if self.screen.nxt:
+                self.screen.akt = self.screen.nxt
+                self.screen.nxt = None
             if self.oldPlayer:
                 self.oldPlayer.stop()
 
     def on_tag(self, bus, message):
-        tag, title = message.parse_tag().get_string('title')
+        tag, title = message.parse_tag().get_string("title")
         if tag:
             self.station.akt = title
 
     def stop(self):
-        if(self.oldPlayer):
+        if self.oldPlayer:
             self.oldPlayer.stop()
         self.player.set_state(Gst.State.NULL)
 
@@ -308,10 +323,10 @@ class GstPlayer:
 
     def seek(self, sec):
         if sec == 0 and self.station.startTime != 0:
-            now = datetime.now(ZoneInfo('localtime'))
+            now = datetime.now(ZoneInfo("localtime"))
             sec = (now - self.station.startTime).seconds
         pos_int = self.player.query_position(Gst.Format.TIME)[1]
-        seek_ns = pos_int - sec * 1E9
+        seek_ns = pos_int - sec * 1e9
         if seek_ns < 0:
             seek_ns = 0
         self.player.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, seek_ns)
@@ -328,13 +343,13 @@ class Player:
             self.player.stop()
         self.screen.slide_stop = True
         self.screen.akt = None
-        self.screen.next = None
+        self.screen.nxt = None
         self.stop_tune = True
 
     def tune(self, to):
-        if self.screen.next or to == self.screen.akt:
+        if self.screen.nxt or to == self.screen.akt:
             return
-        self.screen.next = to
+        self.screen.nxt = to
         self.player = GstPlayer(self.screen.stations[to], self.screen, self.player)
         self.stop_tune = False
 
@@ -370,7 +385,7 @@ class Player:
         else:
             self.tune(keys[-1])
 
-    def next(self):
+    def nxt(self):
         keys = self.screen.stations.keys()
         if self.screen.akt:
             self.tune(keys[(keys.index(self.screen.akt) + 1) % len(keys)])
@@ -398,30 +413,30 @@ def cur_main(screen, loop, stations, update=30, station=None):
         if station in plr.screen.stations:
             plr.tune(station)
         else:
-            raise StationKeyError('Station %s not found' % station)
+            raise StationKeyError("Station %s not found" % station)
 
     while True:
         key = screen.get_wch()
-        if key == 'B':
+        if key == "B":
             plr.seek(0)
-        elif key == 'Q':
+        elif key == "Q":
             screen.clear()
             loop.quit()
             break
-        elif key == 'R':
+        elif key == "R":
             plr.screen.redraw()
-        elif key == 'T':
+        elif key == "T":
             plr.slide()
-        elif key == 'S':
+        elif key == "S":
             plr.stop()
-        elif key == ' ':
+        elif key == " ":
             plr.pause()
         elif key in plr.screen.stations:
             plr.tune(key)
         elif key == curses.KEY_UP:
             plr.pref()
         elif key == curses.KEY_DOWN:
-            plr.next()
+            plr.nxt()
         elif key == curses.KEY_LEFT:
             plr.seek(10)
         elif key == curses.KEY_RIGHT:
@@ -429,17 +444,17 @@ def cur_main(screen, loop, stations, update=30, station=None):
 
 
 def grab(station, update, stations):
-    if station[0] == 'all':
+    if station[0] == "all":
         station = stations.keys()
 
     while True:
         try:
             for i in station:
                 if i not in stations:
-                    print('Station %s not found' % i)
+                    print("Station %s not found" % i)
                     exit(2)
                 stations[i].update()
-                print(stations[i].name + ': ' + stations[i].akt)
+                print(stations[i].name + ": " + stations[i].akt)
             sleep(update)
         except KeyboardInterrupt:
             break
@@ -447,26 +462,38 @@ def grab(station, update, stations):
 
 def main(stations):
     parser = ArgumentParser()
-    parser.add_argument('-g', '--grabber', metavar='stationkey[,..]',
-                        help='mode to test grabber function of a station (all for all stations)')
-    parser.add_argument('-s', '--station', metavar='stationkey',
-                        help='Station to start with')
-    parser.add_argument('-u', '--update', type=float, metavar='time',
-                        help='update intervall for grabber function')
+    parser.add_argument(
+        "-g",
+        "--grabber",
+        metavar="stationkey[,..]",
+        help="mode to test grabber function of a station (all for all stations)",
+    )
+    parser.add_argument(
+        "-s", "--station", metavar="stationkey", help="Station to start with"
+    )
+    parser.add_argument(
+        "-u",
+        "--update",
+        type=float,
+        metavar="time",
+        help="update intervall for grabber function",
+    )
     options = parser.parse_args()
 
     if options.grabber:
         if not options.update:
             options.update = 2
-        grab(options.grabber.split(','), options.update, stations)
+        grab(options.grabber.split(","), options.update, stations)
     else:
         if not options.update:
             options.update = 30
         try:
             Gst.init(None)
             loop = GLib.MainLoop()
-            Thread(target=curses.wrapper, args=(cur_main, loop, stations,
-                                                options.update, options.station)).start()
+            Thread(
+                target=curses.wrapper,
+                args=(cur_main, loop, stations, options.update, options.station),
+            ).start()
             loop.run()
         except (ScreenSizeError, StationKeyError) as e:
             print(e)
